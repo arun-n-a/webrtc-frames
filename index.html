@@ -31,9 +31,9 @@
        if (canvas.getContext && analyser) {
           var ctx = canvas.getContext('2d');
           ctx.drawImage(vid, 0, 0, 200, 150);
-          //frame = ctx.getImageData(0, 0, 200, 150);
-          //console.log("canvas one frame: ", frame.data);
-          //socket.emit('video frames', frame.data);
+          frame = ctx.getImageData(0, 0, 200, 150);
+          console.log("canvas one frame: ", frame.data);
+          socket.emit('video frames', frame.data);
           
           //var l = frame.data.length / 4;
           //for (var i = 0; i < l; i++) {
@@ -46,35 +46,23 @@
           //ctx2.putImageData(imageData, 0, 0);
  
           //freqs = new Uint8Array(analyser.frequencyBinCount);
-          //times = new Uint8Array(analyser.frequencyBinCount);
+          times = new Uint8Array(analyser.frequencyBinCount);
           //FFTData = new Float32Array(analyser.frequencyBinCount);
           //analyser.getFloatFrequencyData(FFTData);
-          //analyser.getByteTimeDomainData(times);
+          analyser.getByteTimeDomainData(times);
           // getByteTimeDomainData
           //console.log(FFTData);
-          //console.log("Times: ", times);
+          console.log("Times: ", times);
           //socket.emit('audio frames', times);
-          console.log(frame)
           //console.log("freqs: ", freqs);
           return;
        }
     }
-    function drawNewCanvas() {
-      if (canvas.getContext && analyser) {
-         var ctx = canvas.getContext('2d');
-         ctx.drawImage(vid, 0, 0, 200, 150);
-         frame = ctx.getImageData(0, 0, 200, 150);
-         console.log("canvas one frame is: ", frame.data);
-         socket.emit('video frames', frame.data);
-         return;
-      }
-   }
         
 
  
      //update canvas for every 25ms
-     setInterval(function() { drawNewCanvas(); }, 250);
-     //setInterval(function() { draw(); }, 250);
+     setInterval(function() { draw(); }, 250);
  
      //capture stream from canvas
      var localStream = canvas.captureStream(25);
