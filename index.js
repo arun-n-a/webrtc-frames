@@ -1,7 +1,7 @@
 const app = require('express')();
 const http = require('http').Server(app);
 const io = require('socket.io')(http);
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 8000;
 
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/index.html');
@@ -13,8 +13,9 @@ io.on('connection', (socket) => {
     console.log(audioFrameIs);
   });
   socket.on('video frames', msg => {
-    console.log("Videooooo*****")
+    console.log("Videooooo*****: ", msg)
     var videoFrameIs = new Uint8ClampedArray(msg);
+    socket.emit("rec", videoFrameIs);
     console.log(videoFrameIs);
   });
 });
