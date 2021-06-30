@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Webrtc A</title>
+    <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="js/webrtc_adaptor.js"></script>
+  </head>
+  <body>
+    
+    <div class="col-sm-12 form-group">
+      <canvas id="canvas" width="200" height="150"></canvas>
+      <canvas id="canvasrgba" width="200" height="150"></canvas>
+      <p>
+         <video id="localVideo"  autoplay muted controls playsinline></video>
+     </p>
+  </div>
+  <script src="/socket.io/socket.io.js"></script>
+ <script>
+    var frame, aCtx, analyser, microphone, freqs, times, FFTData;
+    var audioContext = window.AudioContext || window.webkitAudioContext;
+    var canvas = document.getElementById('canvas');
+    var canvasr = document.getElementById('canvasrgba');
+    var vid = document.getElementById('localVideo');
+    
+    
+
+    
+    function draw() {
+ 
+       if (canvas.getContext && analyser) {
+          var ctx = canvas.getContext('2d');
+          ctx.drawImage(vid, 0, 0, 200, 150);
+          frame = ctx.getImageData(0, 0, 200, 150);
+          var ctx2 = canvasr.getContext("2d");
+          console.log("frame: ", frame);
+          //const imageData = ctx.createImageData(200, 150);
+          
+          let imageDataa = new ImageData(frame.data, 200, 150);
+          ctx2.putImageData(imageDataa, 0, 0);
+          
+          //console.log("frame is: ", frame.data);
+          socket.emit('video frames', frame.data);
+          
+          //var l = frame.data.length / 4;
+          //for (var i = 0; i < l; i++) {
+            //var grey = (frame.data[i * 4 + 0] + frame.data[i * 4 + 1] + frame.data[i * 4 + 2]) / 3;
+            //imageData.data[i * 4 + 0] = grey;
+            //imageData.data[i * 4 + 1] = grey;
+            //imageData.data[i * 4 + 2] = grey;
+           //}
+           //console.log(imageData.data)
+          //ctx2.putImageData(imageData, 0, 0);
+ 
+          //freqs = new Uint8Array(analyser.frequencyBinCount);
+          times = new Uint8Array(analyser.frequencyBinCount);
+          //FFTData = new Float32Array(analyser.frequencyBinCount);
+          //analyser.getFloatFrequencyData(FFTData);
+          analyser.getByteTimeDomainData(times);
+          // getByteTimeDomainData
+          //console.log(FFTData);
+          //console.log("Times: ", times);
+          //console.log(times);
+          //socket.emit('audio frames', times);
+          console.log(frame)
+          //console.log("freqs: ", freqs);
+          //console.log("asasdasdadsa: ", imageData);
+          return;
+       }
+    }
+ 
+     //update canvas for every 25ms
+ 
+     setInterval(function() { draw(); }, 2500);
+ 
+     //capture stream from canvas
+     var localStream = canvas.captureStream(25);
+     //get audio with getUserMedia
+ 
+     navigator.mediaDevices.getUserMedia({video: true, audio:true}).then(function (stream) {
+ 
+       var video = document.querySelector('video#localVideo');
+ 
+       video.srcObject = stream;
+       //add audio track to the localstream which is captured from canvas
+ 
+      localStream.addTrack(stream.getAudioTracks()[0]);
+ 
+       video.onloadedmetadata = function(e) {
+ 
+       video.play();
+ 
+       aCtx = new (AudioContext || webkitAudioContext)();
+       // aCtx = new AudioContext();
+       console.log("HS actx: ");
+       analyser = aCtx.createAnalyser();
+       console.log("analyser*** is: ", analyser);
+       // console.log("HS analyser");
+       microphone = aCtx.createMediaStreamSource(stream);
+       console.log("HS microphone");
+       microphone.connect(window.analyser);
+ 
+    };
+ 
+    //initialize the webRTCAdaptor with the localStream created.
+ 
+    //initWebRTCAdaptor method is implemented below
+ 
+    initWebRTCAdaptor(localStream);
+ 
+ });
+</script>
+<script>
+      var socket = io();
+      socket.on("rec", msg => {
+        console.log("***************************: ", msg);
+        var frameDatas = new Uint8Array(msg);
+        console.log("***frameData is:  ", frameDatas);
+        var ctx2 = canvasr.getContext("2d");
+        let imageDataa = new ImageData(frameDatas, 200, 150);
+        console.log("emit rec is: ", imageDataa)
+        ctx2.putImageData(imageDataa, 0, 0);
+
+      });
+  </script>  
+  </body>
+</html>
+
