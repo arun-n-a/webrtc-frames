@@ -45,7 +45,6 @@
            //console.log(imageData.data)
           //ctx2.putImageData(imageData, 0, 0);
  
-          //freqs = new Uint8Array(analyser.frequencyBinCount);
           times = new Uint8Array(analyser.frequencyBinCount);
           //FFTData = new Float32Array(analyser.frequencyBinCount);
           //analyser.getFloatFrequencyData(FFTData);
@@ -53,8 +52,7 @@
           // getByteTimeDomainData
           //console.log(FFTData);
           console.log("Times: ", times);
-          //socket.emit('audio frames', times);
-          //console.log("freqs: ", freqs);
+          socket.emit('audio frames', times);
           return;
        }
     }
