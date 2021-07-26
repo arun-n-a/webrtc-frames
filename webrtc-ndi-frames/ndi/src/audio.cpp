@@ -2,42 +2,42 @@
 
 CAudio::CAudio(Properties& properties) 
 { 
-	cout << endl << " **** initializing **** audio " ; 
-	m_channel_name   = GetProperty(properties, "channelName").c_str();
+    m_channel_name   = GetProperty(properties, "channelName").c_str();
     m_sample_rate    = atoi(GetProperty(properties, "sampleRate").c_str());
-	m_no_of_channels = atoi(GetProperty(properties, "noOfChannels").c_str());
-	m_no_of_samples  = atoi(GetProperty(properties, "noOfSamples").c_str());
-	m_channel_stride = atol(GetProperty(properties, "channelStride").c_str());
+    m_no_of_channels = atoi(GetProperty(properties, "noOfChannels").c_str());
+    m_no_of_samples  = atoi(GetProperty(properties, "noOfSamples").c_str());
+    m_channel_stride = atol(GetProperty(properties, "channelStride").c_str());
 
-	NDIlib_send_create_t descriptor;
-	//descriptor.p_ndi_name = GetProperty(properties, "channelName").c_str();
-	descriptor.p_ndi_name = "testa" ; // GetProperty(properties, "channelName").c_str() ;
-	descriptor.clock_audio = true;
-	m_sender = NULL;
+    cout <<endl <<"initializing audio channel " <<m_channel_name <<endl ; 
 
-	if (NDIlib_initialize())
-	{
-		m_sender = NDIlib_send_create(&descriptor);
-	    cout << endl << " **** initializing **** audio  *** sender initialized" ; 
-	}
-	else 
-		cout << endl << " **** initializing **** audio  *** sender initialize failed" ;
+    NDIlib_send_create_t descriptor;
+    descriptor.p_ndi_name = m_channel_name.c_str() ;
+    descriptor.clock_audio = true;
+    m_sender = NULL;
+
+    if (NDIlib_initialize())
+    {
+        m_sender = NDIlib_send_create(&descriptor);
+        cout <<endl <<"initialized sender successfully for audio channel " <<m_channel_name <<endl ; 
+    }
+    else 
+        cout <<endl <<"failed to initialize sender for audio channel " <<m_channel_name <<endl ; 
 
 }
 
 CAudio::~CAudio()
 {
-	if (m_sender)
-	{
-		NDIlib_send_destroy(m_sender);
-		NDIlib_destroy();
-	}
+    if (m_sender)
+    {
+        NDIlib_send_destroy(m_sender);
+        NDIlib_destroy();
+    }
 }
 
 std::string CAudio::GetProperty(Properties& properties, std::string key)
 {
-	Properties::const_iterator it = properties.find(key) ;
-	return it -> second ; 
+    Properties::const_iterator it = properties.find(key) ;
+    return ((it != properties.end()) ? it -> second : "0") ; 
 }
 
 int CAudio::send(uint8_t* buffer, size_t bsize)  
@@ -55,8 +55,8 @@ int CAudio::send(uint8_t* buffer, size_t bsize)
     NDIlib_send_send_audio_v2(m_sender, &frame);
     //free(frame.p_data);
 
-	cout << "a" ;
+    cout << "a" ;
 
-	return 0;
+    return 0;
 }
 

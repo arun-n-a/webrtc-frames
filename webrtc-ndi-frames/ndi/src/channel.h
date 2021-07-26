@@ -14,7 +14,7 @@ typedef std::map<std::string, std::string>Properties;
 class CChannel
 {
 private:
-    CChannel() {}
+    CChannel() {m_sender = nullptr;}
     CChannel(const CChannel&) {}
     CChannel& operator = (const CChannel&) { return *this; }
     static map<string, CChannel*> list;
@@ -28,14 +28,15 @@ public:
 
     static void SetChannel(CChannel* channel, Properties& properties)
     {
-        
         channel->m_properties.clear() ;
-        if (channel->m_audio) delete channel->m_audio ;
-        if (channel->m_video) delete channel->m_video ;
+        if (channel->m_sender) delete channel->m_sender ;
 
         channel->m_properties = properties; 
-        channel->m_audio = new CAudio(properties);
-        channel->m_video = new CVideo(properties);
+
+        if (properties.find("type")->second == "audio")
+            channel->m_sender = new CAudio(properties);
+        else
+            channel->m_sender = new CVideo(properties);
     }
 
     static void ResetChannel(string id, Properties& properties)
@@ -71,21 +72,19 @@ public:
         CChannel* channel = GetChannel(id) ;
         if (channel) 
         {  
-			channel->m_properties.clear() ;
-			if (channel->m_audio) delete channel->m_audio ;
-			if (channel->m_video) delete channel->m_video ;
+            channel->m_properties.clear() ;
+            if (channel->m_sender) delete channel->m_sender ;
             delete channel ;  
             list.erase(id); 
         }
     }
 
-    CStream * stream(string type)
+    CStream * stream()
     {
-        return ((type=="audio")?m_audio:m_video) ;
+        return m_sender ;
     }
 protected:
-    CStream* m_audio;
-    CStream* m_video;
+    CStream* m_sender;
     std::map<std::string,std::string> m_properties;
     ~CChannel() {}
 };

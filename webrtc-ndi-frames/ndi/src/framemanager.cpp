@@ -33,18 +33,18 @@ Napi::Value setFrames(const Napi::CallbackInfo& info) {
     Napi::ArrayBuffer framebuffer = info[2].As<Napi::ArrayBuffer>() ;
     Napi::Function callback = info[3].As<Napi::Function>();
 
-	CFrames * frames = new CFrames(properties, framebuffer) ;
+    CFrames * frames = new CFrames(properties, framebuffer) ;
 
-	if (mode.Utf8Value()=="async")
-	{
+    if (mode.Utf8Value()=="async")
+    {
          CAsyncFrameManager* frameManager = new CAsyncFrameManager(frames, callback) ;
          frameManager->Queue();
-	}
-	else 
-	{
-		CSyncFrameManager* frameManager = new CSyncFrameManager(frames) ;
-		frameManager->Execute();
-	}
+    }
+    else 
+    {
+        CSyncFrameManager* frameManager = new CSyncFrameManager(frames) ;
+        frameManager->Execute();
+    }
     return info.Env().Undefined();
 }
 

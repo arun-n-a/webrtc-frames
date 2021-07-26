@@ -9,29 +9,39 @@
   <body>
     
     <div class="col-sm-12 form-group">
-      <canvas id="canvas" width="200" height="150"></canvas>
+      <canvas id="canvas"></canvas>
       <canvas id="canvasrgba" width="200" height="150"></canvas>
       <p>
-         <video id="localVideo"  autoplay muted controls playsinline></video>
+         <video id="localVideo"  autoplay controls muted playsinline></video>
      </p>
   </div>
   <script src="/socket.io/socket.io.js"></script>
  <script>
-    var frame, aCtx, analyser, microphone, freqs, times, FFTData;
+    const width = 480;
+    const height = 320;
+    const frameRate = 1000/30;
+
+    var frame, aCtx, analyser, microphone, freqs, times, FFTData, vStreamTrack, imageCapture;
     var audioContext = window.AudioContext || window.webkitAudioContext;
     var canvas = document.getElementById('canvas');
+    canvas.width=width;
+    canvas.height=height;
     var canvasr = document.getElementById('canvasrgba');
     var vid = document.getElementById('localVideo');
-    
+    var frameCount = 0;
     
 
     
     function draw() {
+      console.log(frameCount);
  
        if (canvas.getContext && analyser) {
           var ctx = canvas.getContext('2d');
-          ctx.drawImage(vid, 0, 0, 200, 150);
-          frame = ctx.getImageData(0, 0, 200, 150);
+          imageCapture.grabFrame()
+          .then(function(imageFrame){
+            ctx.drawImage(imageFrame, 0, 0, width, height);
+          })
+          frame = ctx.getImageData(0, 0, width, height);
           //console.log("canvas one frame: ", frame.data);
           socket.emit('video frames', frame.data);
           
@@ -62,19 +72,26 @@
 
  
      //update canvas for every 25ms
-     setInterval(function() { draw(); }, 200);
+     setInterval(function() { draw(); }, frameRate);
  
      //capture stream from canvas
-     var localStream = canvas.captureStream(25);
+     var localStream = canvas.captureStream(frameRate);
      //get audio with getUserMedia
  
-     navigator.mediaDevices.getUserMedia({video: true, audio:true}).then(function (stream) {
+     navigator.mediaDevices.getUserMedia(
+        {video: true, audio:true}
+       ).then(function (stream) {
  
        var video = document.querySelector('video#localVideo');
  
        video.srcObject = stream;
        //add audio track to the localstream which is captured from canvas
- 
+      vStreamTrack = stream.getVideoTracks()[0];
+      vStreamTrack.applyConstraints({
+          width: {min: 300, ideal: width},
+          height: {min:200 , ideal: height},
+        })
+      imageCapture = new ImageCapture(vStreamTrack)
       localStream.addTrack(stream.getAudioTracks()[0]);
  
        video.onloadedmetadata = function(e) {
@@ -97,7 +114,7 @@
  
     //initWebRTCAdaptor method is implemented below
  
-    initWebRTCAdaptor(localStream);
+    // initWebRTCAdaptor(localStream);
  
  });
 </script>

@@ -7,14 +7,14 @@ class CSyncFrameManager
 {
 
 public:
-	CSyncFrameManager(CFrames* frames) : frames(frames){} 
-	~CSyncFrameManager() {}
+    CSyncFrameManager(CFrames* frames) : frames(frames){} 
+    ~CSyncFrameManager() {}
 
-	void Execute() {
-		frames->Send() ;
-	}
+    void Execute() {
+        frames->Send() ;
+    }
 private:
-	CFrames* frames;
+    CFrames* frames;
 };
 
 #endif // CSYNCFRAMEMANAGER_H
