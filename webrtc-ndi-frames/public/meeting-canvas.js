@@ -199,7 +199,7 @@ document.getElementById('frameRate').addEventListener('change', () => {
     drawVideoOnMeetingCanvas(video3Track, canvasOptions, 4);
   }, frameRate);
 
-  if (document.getElementById('meetingCanvasBroadcast').value) {
+  if (parseInt(document.getElementById('meetingCanvasBroadcast').value)) {
     emitCanvas = setInterval(sendMeetingCanvas, frameRate)
   }
   // console.log(frameRate);
@@ -207,7 +207,7 @@ document.getElementById('frameRate').addEventListener('change', () => {
 
 
 document.getElementById('meetingCanvasBroadcast').addEventListener('change', () => {
-  if (document.getElementById('meetingCanvasBroadcast').value) {
+  if (parseInt(document.getElementById('meetingCanvasBroadcast').value)) {
     emitCanvas = setInterval(sendMeetingCanvas, frameRate)
   } else {
     clearInterval(emitCanvas)
