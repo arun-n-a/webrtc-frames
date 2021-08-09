@@ -1,135 +1,228 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>Webrtc A</title>
-    <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
-    <script src="js/webrtc_adaptor.js"></script>
-  </head>
-  <body>
-    
-    <div class="col-sm-12 form-group">
-      <canvas id="canvas"></canvas>
-      <canvas id="canvasrgba" width="200" height="150"></canvas>
-      <p>
-         <video id="localVideo"  autoplay controls muted playsinline></video>
-     </p>
-  </div>
-  <script src="/socket.io/socket.io.js"></script>
- <script>
-    const width = 480;
-    const height = 320;
-    const frameRate = 1000/30;
 
-    var frame, aCtx, analyser, microphone, freqs, times, FFTData, vStreamTrack, imageCapture;
+<head>
+  <title>Webrtc A</title>
+  <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+
+  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script> -->
+  <script src="socket.io/socket.io.js"></script>
+  <script src="js/webrtc_adaptor.js"></script>
+</head>
+
+<body>
+  <div>
+    <label for="channelName">Channel</label>
+    <select name="channelName" id="channelName">
+      <option value="0">Select Channel Name </option>
+      <option value="Alpha">Alpha</option>
+      <option value="Beta">Beta</option>
+      <option value="Gamma">Gamma</option>
+    </select>
+  </div>
+  <div style="margin-top: .5em;">
+    <label for="frameRate">Frame Rate</label>
+    <select name="frameRate" id="frameRate">
+      <option value="1">1 Fps</option>
+      <option value="5">5 Fps</option>
+      <option value="10">10 Fps</option>
+      <option value="15">15 Fps</option>
+    </select>
+  </div>
+  <div style="margin-top: .5em;">
+    <label for="videoResolution">Video Resolution</label>
+    <select name="videoResolution" id="videoResolution">
+      <option value="0">Select Resoultion</option>
+      <option selected value="120">120x80</option>
+      <option value="240">240x160</option>
+      <option value="300">300x200</option>
+      <option value="360">360x240</option>
+      <option value="480">480x320</option>
+      <option value="540">540x360</option>
+      <option value="600">600x400</option>
+    </select>
+  </div>
+  <div style="margin-top: .5em;">
+    <label for="meetingCanvasBroadcast">Broadcast Meeting Canvas</label>
+    <select name="meetingCanvasBroadcast" id="meetingCanvasBroadcast">
+      <option value="0">No</option>
+      <option value="1">Yes </option>
+    </select>
+  </div>
+  <div style="margin-top: 1em; float:right;">
+    <label id="canvasLabel" for="canvas">Local canvas send in 1 FPS</label><br>
+    <canvas id="canvas" ></canvas>
+    <div class="" style="margin-top: .5em">
+      <p>
+        <label hidden for="localVideo">Video from camera source</label><br>
+        <video hidden id="localVideo" autoplay controls muted playsinline></video>
+      </p>
+    </div>
+  </div>
+  <div class="">
+    <canvas id="meetingCanvas"  height="400" width="600" style="border:2px solid #FF0000; margin-top:1rem; margin-left:4rem;"></canvas>
+  </div>
+  <script>
+    var socket = io();
+    var width = 120;
+    var height = 80;
+    var frameRate = 1000 / 1;
+
+
+    var frame, aCtx, analyser, microphone, freqs, times, FFTData, vStreamTrack, imageCapture, channelName;
     var audioContext = window.AudioContext || window.webkitAudioContext;
     var canvas = document.getElementById('canvas');
-    canvas.width=width;
-    canvas.height=height;
-    var canvasr = document.getElementById('canvasrgba');
+    canvas.width = width;
+    canvas.height = height;
     var vid = document.getElementById('localVideo');
     var frameCount = 0;
-    
+    channelName = document.getElementById('channelName').value
 
-    
+
+
     function draw() {
-      console.log(frameCount);
- 
-       if (canvas.getContext && analyser) {
-          var ctx = canvas.getContext('2d');
-          imageCapture.grabFrame()
-          .then(function(imageFrame){
+      if (canvas.getContext && analyser) {
+        var ctx = canvas.getContext('2d');
+        imageCapture.grabFrame()
+          .then(function (imageFrame) {
             ctx.drawImage(imageFrame, 0, 0, width, height);
-          })
-          frame = ctx.getImageData(0, 0, width, height);
-          //console.log("canvas one frame: ", frame.data);
-          socket.emit('video frames', frame.data);
-          
-          //var l = frame.data.length / 4;
-          //for (var i = 0; i < l; i++) {
-            //var grey = (frame.data[i * 4 + 0] + frame.data[i * 4 + 1] + frame.data[i * 4 + 2]) / 3;
-            //imageData.data[i * 4 + 0] = grey;
-            //imageData.data[i * 4 + 1] = grey;
-            //imageData.data[i * 4 + 2] = grey;
-           //}
-           //console.log(imageData.data)
-          //ctx2.putImageData(imageData, 0, 0);
- 
-          //freqs = new Uint8Array(analyser.frequencyBinCount);
-          times = new Uint8Array(analyser.frequencyBinCount);
-          //FFTData = new Float32Array(analyser.frequencyBinCount);
-          //analyser.getFloatFrequencyData(FFTData);
-          analyser.getByteTimeDomainData(times);
-          // getByteTimeDomainData
-          //console.log(FFTData);
-          //console.log("Times: ", times);
-          socket.emit('audio frames', times);
-          //console.log("freqs: ", freqs);
-          return;
-       }
-    }
-        
+            // console.log("frame: ", frame.data);
+            frameCount++;
 
- 
-     //update canvas for every 25ms
-     setInterval(function() { draw(); }, frameRate);
- 
-     //capture stream from canvas
-     var localStream = canvas.captureStream(frameRate);
-     //get audio with getUserMedia
- 
-     navigator.mediaDevices.getUserMedia(
-        {video: true, audio:true}
-       ).then(function (stream) {
- 
-       var video = document.querySelector('video#localVideo');
- 
-       video.srcObject = stream;
-       //add audio track to the localstream which is captured from canvas
+
+          }, () => {
+            // console.log("Error");
+          })
+        frame = ctx.getImageData(0, 0, width, height);
+        if (channelName != "0" && typeof(channelName) !== undefined) {
+
+          socket.emit('video frames', {
+            'id': channelName.concat(width),
+            'channelName': channelName.concat(width),
+            'height': height,
+            'width': width,
+            'frameRate': frameRate,
+            'data': frame.data
+          });
+        }
+
+
+        //var l = frame.data.length / 4;
+        //for (var i = 0; i < l; i++) {
+        //var grey = (frame.data[i * 4 + 0] + frame.data[i * 4 + 1] + frame.data[i * 4 + 2]) / 3;
+        //imageData.data[i * 4 + 0] = grey;
+        //imageData.data[i * 4 + 1] = grey;
+        //imageData.data[i * 4 + 2] = grey;
+        //}
+        //console.log(imageData.data)
+        //ctx2.putImageData(imageData, 0, 0);
+
+        //freqs = new Uint8Array(analyser.frequencyBinCount);
+        times = new Uint8Array(analyser.frequencyBinCount);
+        //FFTData = new Float32Array(analyser.frequencyBinCount);
+        //analyser.getFloatFrequencyData(FFTData);
+        analyser.getByteTimeDomainData(times);
+        // getByteTimeDomainData
+        //console.log(FFTData);
+        //console.log("Times: ", times);
+        // socket.emit('audio frames', times);
+        //console.log("freqs: ", freqs);
+        return;
+      }
+    }
+
+
+
+    //update canvas for every 25ms
+    let emitFrame = setInterval(function () { draw(); }, frameRate);
+    setInterval(function () {
+      console.log(frameCount);
+      frameCount = 0;
+    }, 1000)
+    //capture stream from canvas
+    var localStream = canvas.captureStream(frameRate);
+    //get audio with getUserMedia
+
+    navigator.mediaDevices.getUserMedia(
+      { video: true, audio: true }
+    ).then(function (stream) {
+
+      var video = document.querySelector('video#localVideo');
+
+      video.srcObject = stream;
+      //add audio track to the localstream which is captured from canvas
       vStreamTrack = stream.getVideoTracks()[0];
       vStreamTrack.applyConstraints({
-          width: {min: 300, ideal: width},
-          height: {min:200 , ideal: height},
-        })
+        width: { min: 300, ideal: width },
+        height: { min: 200, ideal: height },
+        frameRate: { max: frameRate },
+      })
       imageCapture = new ImageCapture(vStreamTrack)
       localStream.addTrack(stream.getAudioTracks()[0]);
- 
-       video.onloadedmetadata = function(e) {
- 
-       video.play();
- 
-       aCtx = new (AudioContext || webkitAudioContext)();
-       // aCtx = new AudioContext();
-       //console.log("HS actx: ");
-       analyser = aCtx.createAnalyser();
-       //console.log("analyser*** is: ", analyser);
-       // console.log("HS analyser");
-       microphone = aCtx.createMediaStreamSource(stream);
-       //console.log("HS microphone");
-       microphone.connect(window.analyser);
- 
-    };
- 
-    //initialize the webRTCAdaptor with the localStream created.
- 
-    //initWebRTCAdaptor method is implemented below
- 
-    // initWebRTCAdaptor(localStream);
- 
- });
-</script>
-<script>
-      var socket = io();
-      socket.on("rec", msg => {
-       // console.log("***************************: ", msg);
-        var frameDatas = new Uint8ClampedArray(msg);
-        //console.log("***frameData is:  ", frameDatas);
-        var ctx2 = canvasr.getContext("2d");
-        let imageDataa = new ImageData(frameDatas, 200, 150);
-        //console.log("emit rec is: ", imageDataa)
-        ctx2.putImageData(imageDataa, 0, 0);
-      });
-  </script>  
-  </body>
-</html>
 
+      video.onloadedmetadata = function (e) {
+
+        video.play();
+
+        aCtx = new (AudioContext || webkitAudioContext)();
+        // aCtx = new AudioContext();
+        //console.log("HS actx: ");
+        analyser = aCtx.createAnalyser();
+        //console.log("analyser*** is: ", analyser);
+        // console.log("HS analyser");
+        microphone = aCtx.createMediaStreamSource(stream);
+        //console.log("HS microphone");
+        microphone.connect(window.analyser);
+
+      };
+
+      //initialize the webRTCAdaptor with the localStream created.
+
+      //initWebRTCAdaptor method is implemented below
+
+      // initWebRTCAdaptor(localStream);
+
+    });
+
+
+    document.getElementById('frameRate').addEventListener('change', () => {
+    frameRate = 1000 / document.getElementById('frameRate').value
+    clearInterval(emitFrame)
+    emitFrame = setInterval(function () { draw(); }, frameRate);
+    // console.log(frameRate);
+    document.getElementById("canvasLabel").innerHTML = "Video source send in ".concat(Math.round(1000 / frameRate)).concat(" FPS")
+    })
+
+    document.getElementById('videoResolution').addEventListener("change", () => {
+      width = document.getElementById('videoResolution').value
+      height = (width * 2) / 3;
+      canvas.height = height;
+      canvas.width = width;
+      vStreamTrack.applyConstraints({
+        width: { min: 300, ideal: width },
+        height: { min: 200, ideal: height },
+        frameRate: { max: frameRate },
+      })
+    });
+    document.getElementById('channelName').addEventListener("change", ()=>{
+      channelName = document.getElementById('channelName').value
+      emitFrame = setInterval(function () { draw(); }, frameRate);
+      // console.log("Transmitting video frames as::::::", channelName);
+    })
+  </script>
+  <script>
+    // var socket = io();
+    socket.on("rec", msg => {
+      // console.log("***************************: ", msg);
+      // var frameDatas = new Uint8ClampedArray(msg);
+      //console.log("***frameData is:  ", frameDatas);
+      // var ctx2 = canvasr.getContext("2d");
+      // let imageDataa = new ImageData(frameDatas, 200, 150);
+      //console.log("emit rec is: ", imageDataa)
+      // ctx2.putImageData(imageDataa, 0, 0);
+    });
+  </script>
+</body>
+
+<script src="/static/meeting-canvas.js"></script>
+</html>

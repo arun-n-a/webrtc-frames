@@ -52,14 +52,14 @@ int CVideo::send(uint8_t* buffer, size_t bsize)
 
     frame.p_data=buffer ;
 
-    cout << "v" ;
 
-    // for (int idx = 1; idx; idx--) {
+    for (int idx = 1; idx; idx--) {
 //        NDIlib_send_send_video_v2(m_sender, &frame);
             NDIlib_send_send_video_async_v2(m_sender, &frame);
-    // }
+    }
 //    free(frame.p_data);
 
+    // cout << "v" ;
 
     return 0;
 }

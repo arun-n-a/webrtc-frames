@@ -47,15 +47,29 @@ int CAudio::send(uint8_t* buffer, size_t bsize)
     frame.sample_rate             = m_sample_rate;                      // 48000
     frame.no_channels             = m_no_of_channels;                   // 1
     frame.no_samples              = m_no_of_samples;                    // 1920
-    frame.channel_stride_in_bytes = m_channel_stride * sizeof(float);   // 1920 * sizeof(float);
+    frame.channel_stride_in_bytes = m_no_of_samples * sizeof(float);    // 1920 * sizeof(float);
+    frame.p_data = (float*)malloc( m_no_of_samples * m_no_of_channels * sizeof(float));
 
-    frame.p_data = (float*)malloc(frame.no_channels * frame.channel_stride_in_bytes + 1);
-    std::copy((float*)buffer, (float*)buffer + bsize, frame.p_data);
+	size_t total_samples = bsize/4 ;
+	float* p_channel = (float*)((uint8_t*)frame.p_data) ;
+
+	for(unsigned int i=0; i<total_samples ;i++)
+	{
+    	unsigned char sense [] = {buffer[i*4], buffer[i*4+1], buffer[i*4+2], buffer[i*4+3]};
+        float pulse = *(float *)(sense);
+//		int index = (i%m_no_of_channels)*m_no_of_samples+(i/m_no_of_channels) ;
+//		p_channel[index] = pulse ;
+		p_channel[i] = pulse ; 
+
+//		printf ("\t%d => [ %d ] %0.21f\t", i, index, pulse) ; 
+
+	}
+
 
     NDIlib_send_send_audio_v2(m_sender, &frame);
     //free(frame.p_data);
 
-    cout << "a" ;
+    cout << endl <<  "a" ;
 
     return 0;
 }

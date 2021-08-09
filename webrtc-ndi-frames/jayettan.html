@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+    <head>
+
+    <title>Webrtc A</title>
+        <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    </head>
+
+    <body>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <audio controls="" muted="">
+        <source src="static/Boku no Hero Academia - Epic Battle Soundtrack Playlist.mp3" type="audio/mp3">
+      </audio>
+
+    <script>
+    var socket = io();
+     var frame, audioContext, analyser, microphone, freqs, times, FFTData;
+        var audioContext = window.AudioContext || window.webkitAudioContext;
+        var canvas = document.getElementById('canvas');
+
+        function draw() {
+            if (analyser) {
+                times = new Float32Array(analyser.frequencyBinCount);
+                analyser.getFloatTimeDomainData(times);
+//              analyser.getFloatFrequencyData(times);
+                // console.log(times) ;
+    //          
+             socket.emit('audio frames', times);
+                return;
+            }
+        }
+
+        navigator.mediaDevices.getUserMedia({audio:true}).then((stream) => {
+            audioContext = new (AudioContext || webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            analyser.connect(audioContext.destination);
+            const audioElement = document.querySelector('audio');
+            const track = audioContext.createMediaElementSource(audioElement);
+            track.connect(analyser);
+            audioElement.play();
+        });
+
+        setInterval(function() { draw(); }, 1024/48.1);
+
+        </script>
+</body>
+</html>

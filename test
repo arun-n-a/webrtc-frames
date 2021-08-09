@@ -1,0 +1,10 @@
+/home/arun/Documents/Projects/webrtcFrames/webrtc-frames/webrtc-ndi-frames
+
+/home/arun/Documents/Projects/webrtcFrames/webrtc-frames/webrtc-ndi-frames/build/Release
+
+export PATH=$PATH:/home/arun/NDI:/home/arun/Documents/Projects/webrtcFrames/webrtc-frames/webrtc-ndi-frames/build/Release
+ldd obj.target/ndi.node 
+sudo cp libndi.so.4 /lib/x86_64-linux-gnu/
+
+
+/root/WebNDI/webrtc-frames/webrtc-ndi-frames/build/Release
