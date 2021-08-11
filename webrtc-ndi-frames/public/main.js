@@ -11,6 +11,7 @@ var pc;
 var remoteStream;
 var recordedStream = new MediaStream();
 var turnReady;
+var currentVTrackNo=1;
 
 //Initialize turn/stun server here
 //turnconfig will be defined in public/js/config.js
@@ -92,24 +93,6 @@ socket.on('message', function(message, room) {
 });
 
 
-var testFrame ;
-// Event - for receving I420Frame data
-socket.on('i420Frame', function (rgbaFrame, room) {
-  // console.log("Frame Received::::" , rgbaFrame);
-  // testFrame = new ImageData(rgbaFrame.data, 640, 480);
-
-  handlecanvas2(rgbaFrame)
-})
-
-
-socket.on('broadcaster', function (data) {
-  // console.log("Frame Received::::" , rgbaFrame);
-  // testFrame = new ImageData(rgbaFrame.data, 640, 480);
-
-  handlecanvas1(data)
-})
-
-
 //Function to send message in a room
 function sendMessage(message, room) {
   console.log('Client sending message: ', message, room);
@@ -122,9 +105,9 @@ function sendMessage(message, room) {
 //Displaying Local Stream and Remote Stream on webpage
 var localVideo = document.querySelector('#localVideo');
 var remoteVideo = document.querySelector('#remoteVideo');
-// var recordedVideo1 = document.querySelector('#recordedVideo1');
-// var recordedVideo2 = document.querySelector('#recordedVideo2');
-var recordedVideo3 = document.querySelector('#recordedVideo3');
+var remoteVideo1 = document.querySelector('#remoteVideo1');
+var remoteVideo2 = document.querySelector('#remoteVideo2');
+var remoteVideo3 = document.querySelector('#remoteVideo3');
 
 
 console.log("Going to find Local media");
@@ -140,19 +123,10 @@ function gotStream(stream) {
   localStream = stream;
   localVideo.srcObject = stream;
 
-  console.log("Local Stream Tracks", localStream.getTracks());
-  localStream.getTracks().forEach(track => {
-    console.log("Local track:::", track);
-    recordedStream.addTrack(track)
-  });
   localStream.clone().getTracks().forEach(track => {
     console.log("Local track:::", track);
     recordedStream.addTrack(track)
   });
-  console.log("Recorded Stream ::::", recordedStream.getTracks());
-  // recordedVideo1.srcObject = recordedStream
-  // recordedVideo2.srcObject = recordedStream
-  recordedVideo3.srcObject = recordedStream
 
   sendMessage('got user media', room);
   if (isInitiator) {
@@ -248,8 +222,45 @@ function onCreateSessionDescriptionError(error) {
 //Function to play remote stream as soon as this client receives it
 function handleRemoteStreamAdded(event) {
   console.log('Remote stream added.');
-  remoteStream = event.stream;
-  remoteVideo.srcObject = remoteStream;
+  var newStream = event.stream;
+  switch (currentVTrackNo) {
+    case 1:
+      remoteVideo1.srcObject = newStream;
+      newStream.getVideoTracks().forEach(track => {
+      video1Track = track
+      });
+      clearInterval(video1TrackEmit);
+      video1TrackEmit = setInterval(() => {
+        drawVideoOnMeetingCanvas(video1Track, canvasOptions, 2)
+      }, frameRate);
+      break;
+    case 2:
+      remoteVideo2.srcObject = newStream;
+      newStream.getVideoTracks().forEach(track => {
+        video2Track = track
+      });
+      clearInterval(video2TrackEmit);
+      video2TrackEmit = setInterval(() => {
+        drawVideoOnMeetingCanvas(video2Track, canvasOptions, 3)
+      }, frameRate);
+      break;
+    case 3:
+      remoteVideo2.srcObject = newStream;
+
+      newStream.getVideoTracks().forEach(track => {
+        video3Track = track
+      });
+      clearInterval(video3TrackEmit);
+      video3TrackEmit = setInterval(() => {
+        drawVideoOnMeetingCanvas(video3Track, canvasOptions, 4)
+      }, frameRate);
+      break;
+
+    default:
+      currentVTrackNo=1;
+      break;
+  }
+  currentVTrackNo++;
 }
 
 function handleRemoteStreamRemoved(event) {
@@ -309,11 +320,11 @@ var ctx2 = canvas2.getContext('2d');
 var imageCapture , rgbaFrame;
 var pixels8BitsRGBA , pixels8BitsARGB, pixelsAs32Bits, pixelCount, pixelsARGBPacked;
 
-recordedVideo3.addEventListener('play',function () {
-  imageCapture = new ImageCapture(recordedStream.getVideoTracks()[0]);
+localVideo.addEventListener('play',function () {
+  imageCapture = new ImageCapture(localStream.getVideoTracks()[0]);
 
   (function loop() {
-    if (!recordedVideo3.paused || !recordedVideo3.ended) {
+    if (!localVideo.paused || !localVideo.ended) {
       imageCapture.grabFrame()
       .then(function (imageBitmap) {
         ctx.drawImage(imageBitmap, 0, 0, 480, 360);

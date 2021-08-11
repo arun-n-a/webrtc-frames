@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+  <title>Abacies Webrtc</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Import Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+Tamma+2:wght@400;500;600&family=Josefin+Slab&display=swap" rel="stylesheet">
+
+  <!-- Import CSS file -->
+  <link rel="stylesheet" href="/static/styles.css">
+
+  <!-- <link rel="stylesheet" href="/css/main.css" /> -->
+
+</head>
+
+<body class="h-100">
+  <div>
+    <label for="channelName">Channel</label>
+    <select name="channelName" id="channelName">
+      <option value="0">Select Channel Name </option>
+      <option value="Alpha">Alpha</option>
+      <option value="Beta">Beta</option>
+      <option value="Gamma">Gamma</option>
+    </select>
+  </div>
+  <div style="margin-top: .5em;">
+    <label for="frameRate">Frame Rate</label>
+    <select name="frameRate" id="frameRate">
+      <option value="1">1 Fps</option>
+      <option value="5">5 Fps</option>
+      <option value="10">10 Fps</option>
+      <option value="15">15 Fps</option>
+    </select>
+  </div>
+  <div style="margin-top: .5em;">
+    <label for="videoResolution">Video Resolution</label>
+    <select name="videoResolution" id="videoResolution">
+      <option value="0">Select Resoultion</option>
+      <option selected value="120">120x80</option>
+      <option value="240">240x160</option>
+      <option value="300">300x200</option>
+      <option value="360">360x240</option>
+      <option value="480">480x320</option>
+      <option value="540">540x360</option>
+      <option value="600">600x400</option>
+    </select>
+  </div>
+  <div style="margin-top: .5em;">
+    <label for="meetingCanvasBroadcast">Broadcast Meeting Canvas</label>
+    <select name="meetingCanvasBroadcast" id="meetingCanvasBroadcast">
+      <option value="0">No</option>
+      <option value="1">Yes </option>
+    </select>
+  </div>
+  <h2>Data From Recorded Stream converted as Bitmap and drawn to canvas 1</h2>
+
+
+  <canvas id="test" width="1280" height="480"></canvas>
+<br>
+<h2>Data Converted to RGBA from Canvas 1 and Drawn to Canvas 2</h2>
+<canvas id="test2" width="640" height="480">
+</canvas>
+
+
+  <div class="h-100" id="video_display">
+	<div id ="video_container" class="align-items-center" style="margin-top: 10%;">
+      		<div class="local_div" id="div1" style="">
+			<!-- For playing local video -->
+			<video id="localVideo" class="" autoplay muted playsinline></video>
+		</div>
+		<div class="remote_div" id="div2">
+			<!-- For playing local audio -->
+			<video id="remoteVideo1" class="" autoplay playsinline></video>
+		</div>
+    <div class="remote_div" id="div3">
+			<!-- For playing recorded audio -->
+			<video id="remoteVideo2" class="" autoplay playsinline></video>
+		</div>
+    <div class="remote_div" id="div2">
+			<!-- For playing local audio -->
+			<video id="remoteVideo3" class="" autoplay playsinline></video>
+		</div>
+    <!-- <div class="remote_div" id="div3">
+			<video id="recordedVideo3" class="" autoplay playsinline></video>
+		</div> -->
+    	</div>
+  </div>
+
+
+
+  <!-- Import SocketIO for signalling -->
+  <script src="socket.io/socket.io.js"></script>
+
+  <!-- Import WebRTC adapter for compatibility with all the browsers  -->
+  <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+
+  <!-- Import TURN config -->
+  <script src="/static/config.js"></script>
+
+  <!-- Import script containing WebRTC related functions -->
+  <script src="/static/main.js"></script>
+
+</body>
+
+</html>
