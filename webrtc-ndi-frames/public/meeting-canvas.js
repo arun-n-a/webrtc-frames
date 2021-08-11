@@ -1,9 +1,21 @@
+'use strict';
+
+//Defining some global utility variables
+var isChannelReady = false;
+var isInitiator = false;
+var isStarted = false;
+var isBroadcaster =false;
+var localStream;
+var pc;
+var remoteStream;
+var turnReady;
+
 var meetingCanvas = document.getElementById('meetingCanvas');
 var meetingCtx = meetingCanvas.getContext('2d');
 var localStreamTrack, localStreamEmit, localStream;
 var video1Track, video2Track, video3Track;
 var video1TrackEmit, video2TrackEmit, video3TrackEmit, emitCanvas;
-
+var currentVTrackNo = 1;
 let videoDrawConfig = [{
   'x': 0,
   'y': 0,
@@ -34,47 +46,53 @@ let canvasOptions = {
   'videoOptions': videoDrawConfig
 }
 
+//Set local stream constraints
+var localStreamConstraints = {
+  audio: false,
+  video: true
+};
+
+//Initialize turn/stun server here
+//turnconfig will be defined in public/js/config.js
+var pcConfig = turnConfig;
+
+// Prompting for room name:
+var room = prompt('Enter Room name:');
+
+//Ask server to add in the room if room name is provided by the user
+if (room !== '') {
+  socket.emit('create or join', room);
+  console.log('Attempted to create or join room', room);
+}
 
 // GET Local Video Source and add it to Meeting Canvas
-navigator.mediaDevices.getUserMedia({
-  video: true,
-  audio: true
-}).then((stream) => {
+navigator.mediaDevices.getUserMedia(localStreamConstraints)
+.then((stream) => {
+  console.log('Adding local stream.');
   localStream = stream
   localStreamTrack = stream.getVideoTracks()[0];
   localStreamEmit = setInterval(() => {
     drawVideoOnMeetingCanvas(localStreamTrack, canvasOptions, 1)
   }, frameRate);
 
+  sendMessage('got user media', room);
+  if (isInitiator) {
+    maybeStart();
+  }
 
   localStream.clone().getVideoTracks().forEach(track => {
-    // console.log("Local track:::", track);
     video1Track = track
   });
   localStream.clone().getVideoTracks().forEach(track => {
-    // console.log("Local track:::", track);
     video2Track = track
   });
   localStream.clone().getVideoTracks().forEach(track => {
-    // console.log("Local track:::", track);
     video3Track = track
   });
-  // console.log(localStreamTrack);
 })
-
-// Remote Video Tracks initialize
-// localStream.clone().getTracks().forEach(track => {
-//   console.log("Local track:::", track);
-//   video1Track.addTrack(track)
-// });
-// localStream.clone().getTracks().forEach(track => {
-//   console.log("Local track:::", track);
-//   video2Track.addTrack(track)
-// });
-// localStream.clone().getTracks().forEach(track => {
-//   console.log("Local track:::", track);
-//   video3Track.addTrack(track)
-// });
+.catch(function(e) {
+  alert('getUserMedia() error: ' + e.name);
+});
 
 video1TrackEmit = setInterval(() => {
   drawVideoOnMeetingCanvas(video1Track, canvasOptions, 2)
@@ -179,7 +197,143 @@ function sendMeetingCanvas() {
   });
 }
 
-// Event Listeners
+//Function to send message in a room
+function sendMessage(message, room) {
+  console.log('Client sending message: ', message, room);
+  socket.emit('message', message, room);
+}
+
+//Sending bye if user closes the window
+window.onbeforeunload = function() {
+  sendMessage('bye', room);
+};
+
+
+//If initiator, create the peer connection
+function maybeStart() {
+  console.log('>>>>>>> maybeStart() ', isStarted, localStream, isChannelReady);
+  if (!isStarted && typeof localStream !== 'undefined' && isChannelReady) {
+    console.log('>>>>>> creating peer connection');
+    createPeerConnection();
+    pc.addStream(localStream);
+    isStarted = true;
+    console.log('isInitiator', isInitiator);
+    if (isInitiator) {
+      doCall();
+    }
+  }
+}
+
+
+//Creating peer connection
+function createPeerConnection() {
+  try {
+    pc = new RTCPeerConnection(pcConfig);
+    pc.onicecandidate = handleIceCandidate;
+    pc.onaddstream = handleRemoteStreamAdded;
+    pc.onremovestream = handleRemoteStreamRemoved;
+    console.log('Created RTCPeerConnnection');
+  } catch (e) {
+    console.log('Failed to create PeerConnection, exception: ' + e.message);
+    alert('Cannot create RTCPeerConnection object.');
+    return;
+  }
+}
+
+
+function handleCreateOfferError(event) {
+  console.log('createOffer() error: ', event);
+}
+
+//Function to create offer
+function doCall() {
+  console.log('Sending offer to peer');
+  pc.createOffer(setLocalAndSendMessage, handleCreateOfferError);
+}
+
+//Function to create answer for the received offer
+function doAnswer() {
+  console.log('Sending answer to peer.');
+  pc.createAnswer().then(
+    setLocalAndSendMessage,
+    onCreateSessionDescriptionError
+  );
+}
+
+//Function to set description of local media
+function setLocalAndSendMessage(sessionDescription) {
+  pc.setLocalDescription(sessionDescription);
+  console.log('setLocalAndSendMessage sending message', sessionDescription);
+  sendMessage(sessionDescription, room);
+}
+
+function onCreateSessionDescriptionError(error) {
+  trace('Failed to create session description: ' + error.toString());
+}
+
+//Function to play remote stream as soon as this client receives it
+function handleRemoteStreamAdded(event) {
+  console.log('Remote stream added.');
+  remoteStream = event.stream;
+  switch (currentVTrackNo) {
+    case 1:
+      remoteStream.getVideoTracks().forEach(track => {
+      video1Track = track
+      });
+      clearInterval(video1TrackEmit);
+      video1TrackEmit = setInterval(() => {
+        drawVideoOnMeetingCanvas(video1Track, canvasOptions, 2)
+      }, frameRate);
+      break;
+    case 2:
+      remoteStream.getVideoTracks().forEach(track => {
+        video2Track = track
+      });
+      clearInterval(video2TrackEmit);
+      video2TrackEmit = setInterval(() => {
+        drawVideoOnMeetingCanvas(video2Track, canvasOptions, 3)
+      }, frameRate);
+      break;
+    case 3:
+      remoteStream.getVideoTracks().forEach(track => {
+        video3Track = track
+      });
+      clearInterval(video3TrackEmit);
+      video3TrackEmit = setInterval(() => {
+        drawVideoOnMeetingCanvas(video3Track, canvasOptions, 4)
+      }, frameRate);
+      break;
+  
+    default:
+      currentVTrackNo=1;
+      break;
+  }
+  currentVTrackNo++;
+}
+
+function handleRemoteStreamRemoved(event) {
+  console.log('Remote stream removed. Event: ', event);
+}
+
+function hangup() {
+  console.log('Hanging up.');
+  stop();
+  sendMessage('bye',room);
+}
+
+function handleRemoteHangup() {
+  console.log('Session terminated.');
+  stop();
+  isInitiator = false;
+}
+
+function stop() {
+  isStarted = false;
+  pc.close();
+  pc = null;
+}
+
+// ########################   Event Listeners   ##################################
 document.getElementById('frameRate').addEventListener('change', () => {
   frameRate = 1000 / document.getElementById('frameRate').value
   clearInterval(localStreamEmit);
@@ -215,3 +369,62 @@ document.getElementById('meetingCanvasBroadcast').addEventListener('change', () 
 })
 
 window.addEventListener('load', drawGrid);
+// ####################### End Event Listener ####################################
+
+
+
+//#######################    Defining socket events   ##############################
+//Event - Client has created the room i.e. is the first member of the room
+socket.on('created', function(room) {
+  console.log('Created room ' + room);
+  isInitiator = true;
+});
+
+//Event - Room is full
+socket.on('full', function(room) {
+  console.log('Room ' + room + ' is full');
+});
+
+//Event - Another client tries to join room
+socket.on('join', function (room){
+  console.log('Another peer made a request to join room ' + room);
+  console.log('This peer is the initiator of room ' + room + '!');
+  isChannelReady = true;
+});
+
+//Event - Client has joined the room
+socket.on('joined', function(room) {
+  console.log('joined: ' + room);
+  isChannelReady = true;
+});
+
+//Event - server asks to log a message
+socket.on('log', function(array) {
+  console.log.apply(console, array);
+});
+
+
+//Event - for sending meta for establishing a direct connection using WebRTC The Driver code
+socket.on('message', function(message, room) {
+    console.log('Client received message:', message,  room);
+    if (message === 'got user media') {
+      maybeStart();
+    } else if (message.type === 'offer') {
+      if (!isInitiator && !isStarted) {
+        maybeStart();
+      }
+      pc.setRemoteDescription(new RTCSessionDescription(message));
+      doAnswer();
+    } else if (message.type === 'answer' && isStarted) {
+      pc.setRemoteDescription(new RTCSessionDescription(message));
+    } else if (message.type === 'candidate' && isStarted) {
+      var candidate = new RTCIceCandidate({
+        sdpMLineIndex: message.label,
+        candidate: message.candidate
+      });
+      pc.addIceCandidate(candidate);
+    } else if (message === 'bye' && isStarted) {
+      handleRemoteHangup();
+    }
+});
+//####################### End Defining socket events ################################
