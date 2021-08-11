@@ -87,24 +87,25 @@ navigator.mediaDevices.getUserMedia(localStreamConstraints)
     video2Track = track
   });
   localStream.clone().getVideoTracks().forEach(track => {
+
     video3Track = track
   });
+  video1TrackEmit = setInterval(() => {
+    drawVideoOnMeetingCanvas(video1Track, canvasOptions, 2)
+  }, frameRate);
+
+  video2TrackEmit = setInterval(() => {
+    drawVideoOnMeetingCanvas(video2Track, canvasOptions, 3)
+  }, frameRate);
+
+  video3TrackEmit = setInterval(() => {
+    drawVideoOnMeetingCanvas(video3Track, canvasOptions, 4)
+  }, frameRate);
 })
 .catch(function(e) {
   alert('getUserMedia() error: ' + e.name);
 });
 
-video1TrackEmit = setInterval(() => {
-  drawVideoOnMeetingCanvas(video1Track, canvasOptions, 2)
-}, frameRate);
-
-video2TrackEmit = setInterval(() => {
-  drawVideoOnMeetingCanvas(video2Track, canvasOptions, 3)
-}, frameRate);
-
-video3TrackEmit = setInterval(() => {
-  drawVideoOnMeetingCanvas(video3Track, canvasOptions, 4)
-}, frameRate);
 
 function drawVideoOnMeetingCanvas(stream, canvasOptions, vIndex) {
   let imageCapture = new ImageCapture(stream);
@@ -121,7 +122,6 @@ function drawVideoOnMeetingCanvas(stream, canvasOptions, vIndex) {
 
 function drawGrid() {
   var cnv = document.getElementById("meetingCanvas");
-
   var gridOptions = {
     minorLines: {
       widthSeparation: 1,
@@ -303,7 +303,7 @@ function handleRemoteStreamAdded(event) {
         drawVideoOnMeetingCanvas(video3Track, canvasOptions, 4)
       }, frameRate);
       break;
-  
+
     default:
       currentVTrackNo=1;
       break;
