@@ -1,5 +1,7 @@
 'use strict';
-
+var width = 120;
+var height = 80;
+var frameRate = 1000 / 1;
 
 
 //Defining some global utility variables
@@ -11,7 +13,7 @@ var pc;
 var remoteStream;
 var recordedStream = new MediaStream();
 var turnReady;
-var currentVTrackNo=1;
+var currentVTrackNo = 1;
 
 //Initialize turn/stun server here
 //turnconfig will be defined in public/js/config.js
@@ -19,9 +21,9 @@ var pcConfig = turnConfig;
 
 //Set local stream constraints
 var localStreamConstraints = {
-    audio: false,
-    video: true
-  };
+  audio: false,
+  video: true
+};
 
 // Prompting for room name:
 var room = prompt('Enter your username:');
@@ -49,7 +51,7 @@ socket.on('full', function(room) {
 });
 
 //Event - Another client tries to join room
-socket.on('join', function (room){
+socket.on('join', function(room) {
   console.log('Another peer made a request to join room ' + room);
   console.log('This peer is the initiator of room ' + room + '!');
   isChannelReady = true;
@@ -70,26 +72,26 @@ socket.on('log', function(array) {
 //Event - for sending meta for establishing a direct connection using WebRTC
 //The Driver code
 socket.on('message', function(message, room) {
-    console.log('Client received message:', message,  room);
-    if (message === 'got user media') {
+  console.log('Client received message:', message, room);
+  if (message === 'got user media') {
+    maybeStart();
+  } else if (message.type === 'offer') {
+    if (!isInitiator && !isStarted) {
       maybeStart();
-    } else if (message.type === 'offer') {
-      if (!isInitiator && !isStarted) {
-        maybeStart();
-      }
-      pc.setRemoteDescription(new RTCSessionDescription(message));
-      doAnswer();
-    } else if (message.type === 'answer' && isStarted) {
-      pc.setRemoteDescription(new RTCSessionDescription(message));
-    } else if (message.type === 'candidate' && isStarted) {
-      var candidate = new RTCIceCandidate({
-        sdpMLineIndex: message.label,
-        candidate: message.candidate
-      });
-      pc.addIceCandidate(candidate);
-    } else if (message === 'bye' && isStarted) {
-      handleRemoteHangup();
     }
+    pc.setRemoteDescription(new RTCSessionDescription(message));
+    doAnswer();
+  } else if (message.type === 'answer' && isStarted) {
+    pc.setRemoteDescription(new RTCSessionDescription(message));
+  } else if (message.type === 'candidate' && isStarted) {
+    var candidate = new RTCIceCandidate({
+      sdpMLineIndex: message.label,
+      candidate: message.candidate
+    });
+    pc.addIceCandidate(candidate);
+  } else if (message === 'bye' && isStarted) {
+    handleRemoteHangup();
+  }
 });
 
 
@@ -104,18 +106,48 @@ function sendMessage(message, room) {
 
 //Displaying Local Stream and Remote Stream on webpage
 var localVideo = document.querySelector('#localVideo');
-var remoteVideo = document.querySelector('#remoteVideo');
 var remoteVideo1 = document.querySelector('#remoteVideo1');
 var remoteVideo2 = document.querySelector('#remoteVideo2');
 var remoteVideo3 = document.querySelector('#remoteVideo3');
-
+var video1Track, video2Track, video3Track;
+var video1TrackEmit, video2TrackEmit, video3TrackEmit, emitCanvas;
+var meetingCanvas = document.getElementById('meetingCanvas');
+var meetingCtx = meetingCanvas.getContext('2d');
+let videoDrawConfig = [{
+  'x': 0,
+  'y': 0,
+  'width': 300,
+  'height': 200
+}, {
+  'x': 300,
+  'y': 0,
+  'width': 300,
+  'height': 200
+}, {
+  'x': 0,
+  'y': 200,
+  'width': 300,
+  'height': 200
+}, {
+  'x': 300,
+  'y': 200,
+  'width': 300,
+  'height': 200
+}]
+let canvasOptions = {
+  'height': meetingCanvas.height,
+  'width': meetingCanvas.width,
+  'canvas': meetingCanvas,
+  'ctx': meetingCtx,
+  'videoOptions': videoDrawConfig
+}
 
 console.log("Going to find Local media");
 navigator.mediaDevices.getUserMedia(localStreamConstraints)
-.then(gotStream)
-.catch(function(e) {
-  alert('getUserMedia() error: ' + e.name);
-});
+  .then(gotStream)
+  .catch(function(e) {
+    alert('getUserMedia() error: ' + e.name);
+  });
 
 //If found local stream
 function gotStream(stream) {
@@ -127,6 +159,28 @@ function gotStream(stream) {
     console.log("Local track:::", track);
     recordedStream.addTrack(track)
   });
+  localStream.clone().getVideoTracks().forEach(track => {
+    video1Track = track
+  });
+  localStream.clone().getVideoTracks().forEach(track => {
+    video2Track = track
+  });
+  localStream.clone().getVideoTracks().forEach(track => {
+
+    video3Track = track
+  });
+  video1TrackEmit = setInterval(() => {
+    drawVideoOnMeetingCanvas(video1Track, canvasOptions, 2)
+  }, frameRate);
+
+  video2TrackEmit = setInterval(() => {
+    drawVideoOnMeetingCanvas(video2Track, canvasOptions, 3)
+  }, frameRate);
+
+  video3TrackEmit = setInterval(() => {
+    drawVideoOnMeetingCanvas(video3Track, canvasOptions, 4)
+  }, frameRate);
+
 
   sendMessage('got user media', room);
   if (isInitiator) {
@@ -227,7 +281,7 @@ function handleRemoteStreamAdded(event) {
     case 1:
       remoteVideo1.srcObject = newStream;
       newStream.getVideoTracks().forEach(track => {
-      video1Track = track
+        video1Track = track
       });
       clearInterval(video1TrackEmit);
       video1TrackEmit = setInterval(() => {
@@ -257,7 +311,7 @@ function handleRemoteStreamAdded(event) {
       break;
 
     default:
-      currentVTrackNo=1;
+      currentVTrackNo = 1;
       break;
   }
   currentVTrackNo++;
@@ -270,7 +324,7 @@ function handleRemoteStreamRemoved(event) {
 function hangup() {
   console.log('Hanging up.');
   stop();
-  sendMessage('bye',room);
+  sendMessage('bye', room);
 }
 
 function handleRemoteHangup() {
@@ -285,6 +339,83 @@ function stop() {
   pc = null;
 }
 
+
+
+function drawVideoOnMeetingCanvas(stream, canvasOptions, vIndex) {
+  let imageCapture = new ImageCapture(stream);
+  let width = canvasOptions.videoOptions[vIndex - 1]['width'];
+  let height = canvasOptions.videoOptions[vIndex - 1].height;
+  let x = canvasOptions.videoOptions[vIndex - 1].x;
+  let y = canvasOptions.videoOptions[vIndex - 1].y;
+
+  imageCapture.grabFrame()
+    .then((imageBitmap) => {
+      canvasOptions.ctx.drawImage(imageBitmap, x, y, width, height);
+    })
+}
+
+function drawGrid() {
+  var cnv = document.getElementById("meetingCanvas");
+  var gridOptions = {
+    minorLines: {
+      widthSeparation: 1,
+      heighSeparation: 1,
+      color: '#000000'
+    },
+    majorLines: {
+      widthSeparation: 300,
+      heighSeparation: 200,
+      color: '#FF0000'
+    }
+  };
+
+  drawGridLines(cnv, gridOptions.minorLines);
+  drawGridLines(cnv, gridOptions.majorLines);
+
+  return;
+}
+
+function drawGridLines(cnv, lineOptions) {
+
+
+  var iWidth = cnv.width;
+  var iHeight = cnv.height;
+
+  var ctx = cnv.getContext('2d');
+
+  ctx.strokeStyle = lineOptions.color;
+  ctx.strokeWidth = 1;
+
+  ctx.beginPath();
+
+  var iCount = null;
+  var i = null;
+  var x = null;
+  var y = null;
+
+  iCount = Math.floor(iWidth / lineOptions.widthSeparation);
+
+  for (i = 1; i <= iCount; i++) {
+    x = (i * lineOptions.widthSeparation);
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, iHeight);
+    ctx.stroke();
+  }
+
+
+  iCount = Math.floor(iHeight / lineOptions.heighSeparation);
+
+  for (i = 1; i <= iCount; i++) {
+    y = (i * lineOptions.heighSeparation);
+    ctx.moveTo(0, y);
+    ctx.lineTo(iWidth, y);
+    ctx.stroke();
+  }
+
+  ctx.closePath();
+
+  return;
+}
 
 var canvas = document.getElementById('test');
 var ctx = canvas.getContext('2d');
@@ -314,72 +445,39 @@ var ctx2 = canvas2.getContext('2d');
 
 
 
+document.getElementById('frameRate').addEventListener('change', () => {
+  frameRate = 1000 / document.getElementById('frameRate').value
+  clearInterval(emitFrame)
+  emitFrame = setInterval(function() {
+    drawVideoOnMeetingCanvas(localStream,canvasOptions,1);
+  }, frameRate);
+  // console.log(frameRate);
+  document.getElementById("canvasLabel").innerHTML = "Video source send in ".concat(Math.round(1000 / frameRate)).concat(" FPS")
+})
 
-
-
-var imageCapture , rgbaFrame;
-var pixels8BitsRGBA , pixels8BitsARGB, pixelsAs32Bits, pixelCount, pixelsARGBPacked;
-
-localVideo.addEventListener('play',function () {
-  imageCapture = new ImageCapture(localStream.getVideoTracks()[0]);
-
-  (function loop() {
-    if (!localVideo.paused || !localVideo.ended) {
-      imageCapture.grabFrame()
-      .then(function (imageBitmap) {
-        ctx.drawImage(imageBitmap, 0, 0, 480, 360);
-        // pixels8BitsRGBA = ctx.getImageData(0, 0, 480, 360).data
-        // pixelCount = pixels8BitsRGBA.length / 4;
-        // pixelsARGBPacked = new Array(2 + pixelCount);
-        // pixelsARGBPacked[0] = 480;
-        // pixelsARGBPacked[1] = 360;
-
-        // for(var i = 0 ; i < pixelCount ; i++) {
-        //   pixelsARGBPacked[i+2] = parseInt(
-        //         pixels8BitsRGBA[i * 4 + 3].toString(16)
-        //       + pixels8BitsRGBA[i * 4    ].toString(16)
-        //       + pixels8BitsRGBA[i * 4 + 1].toString(16)
-        //       + pixels8BitsRGBA[i * 4 + 2].toString(16)
-        //   , 16);
-        // }
-        if (imageBitmap !== null || imageBitmap !== undefined){
-          // console.log("Before sending",canvas.toDataURL());
-          socket.emit('libyuv', canvas.toDataURL(), room)
-        }
-
-
-      })
-
-      setTimeout(loop, 1000 / 24); // drawing at 25fps
-
-  }})();
-},0);
-
-var pixCount, receivedFrame, receivedImageData;
-
-function handlecanvas2(ImageFrame) {
-  pixCount = (ImageFrame.width * ImageFrame.height *4)
-  receivedFrame = new Uint8ClampedArray(pixCount);
-  for( var i = 0; i < pixCount;i+=4){
-    receivedFrame[i+0]=ImageFrame.data[i+0]
-    receivedFrame[i+1]=ImageFrame.data[i+1]
-    receivedFrame[i+2]=ImageFrame.data[i+2]
-    receivedFrame[i+3]=ImageFrame.data[i+3]
-
-  }
-  console.log( ImageFrame.width , ImageFrame.height);
-  receivedImageData = new ImageData(receivedFrame, ImageFrame.width , ImageFrame.height);
-  ctx2.putImageData(receivedImageData, 0,0)
-}
-
-function handlecanvas1(ImageBitmap) {
-  // console.log("Received:: ",ImageBitmap);
-  ctx2.drawImage(ImageBitmap, 0, 0);
-  // image.src = ImageBitmap;
-}
-
-
-var image = new Image();
-image.onload = function() {
-  ctx2.drawImage(image, 0, 0);
-};
+document.getElementById('videoResolution').addEventListener("change", () => {
+  width = document.getElementById('videoResolution').value
+  height = (width * 2) / 3;
+  canvas.height = height;
+  canvas.width = width;
+  localStream.applyConstraints({
+    width: {
+      min: 300,
+      ideal: width
+    },
+    height: {
+      min: 200,
+      ideal: height
+    },
+    frameRate: {
+      max: frameRate
+    },
+  })
+});
+document.getElementById('channelName').addEventListener("change", () => {
+      channelName = document.getElementById('channelName').value
+      emitFrame = setInterval(function() {
+        drawVideoOnMeetingCanvas(localStream, canvasOptions,1);
+      }, frameRate);
+      // console.log("Transmitting
+});

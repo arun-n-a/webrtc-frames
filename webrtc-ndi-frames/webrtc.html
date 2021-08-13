@@ -57,36 +57,43 @@
   </div>
   <h2>Data From Recorded Stream converted as Bitmap and drawn to canvas 1</h2>
 
-
-  <canvas id="test" width="1280" height="480"></canvas>
-<br>
-<h2>Data Converted to RGBA from Canvas 1 and Drawn to Canvas 2</h2>
-<canvas id="test2" width="640" height="480">
-</canvas>
+  <div style="margin-top: 1em; float:right;">
+    <label id="canvasLabel" for="canvas">Local canvas send in 1 FPS</label><br>
+    <canvas id="canvas"></canvas>
+    <div class="" style="margin-top: .5em">
+    </div>
+  </div>
+  <div class="">
+    <canvas id="meetingCanvas" height="400" width="600" style="border:2px solid #FF0000; margin-top:1rem; margin-left:4rem;"></canvas>
+  </div>
+  <br>
+  <h2>Data Converted to RGBA from Canvas 1 and Drawn to Canvas 2</h2>
+  <canvas id="test2" width="640" height="480">
+  </canvas>
 
 
   <div class="h-100" id="video_display">
-	<div id ="video_container" class="align-items-center" style="margin-top: 10%;">
-      		<div class="local_div" id="div1" style="">
-			<!-- For playing local video -->
-			<video id="localVideo" class="" autoplay muted playsinline></video>
-		</div>
-		<div class="remote_div" id="div2">
-			<!-- For playing local audio -->
-			<video id="remoteVideo1" class="" autoplay playsinline></video>
-		</div>
-    <div class="remote_div" id="div3">
-			<!-- For playing recorded audio -->
-			<video id="remoteVideo2" class="" autoplay playsinline></video>
-		</div>
-    <div class="remote_div" id="div2">
-			<!-- For playing local audio -->
-			<video id="remoteVideo3" class="" autoplay playsinline></video>
-		</div>
-    <!-- <div class="remote_div" id="div3">
+    <div id="video_container" class="align-items-center" style="margin-top: 10%;">
+      <div class="local_div" id="div1" style="">
+        <!-- For playing local video -->
+        <video id="localVideo" class="" autoplay muted playsinline></video>
+      </div>
+      <div class="remote_div" id="div2">
+        <!-- For playing local audio -->
+        <video id="remoteVideo1" class="" autoplay playsinline></video>
+      </div>
+      <div class="remote_div" id="div3">
+        <!-- For playing recorded audio -->
+        <video id="remoteVideo2" class="" autoplay playsinline></video>
+      </div>
+      <div class="remote_div" id="div2">
+        <!-- For playing local audio -->
+        <video id="remoteVideo3" class="" autoplay playsinline></video>
+      </div>
+      <!-- <div class="remote_div" id="div3">
 			<video id="recordedVideo3" class="" autoplay playsinline></video>
 		</div> -->
-    	</div>
+    </div>
   </div>
 
 
