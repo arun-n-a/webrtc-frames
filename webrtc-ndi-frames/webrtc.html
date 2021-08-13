@@ -17,15 +17,7 @@
 </head>
 
 <body class="h-100">
-  <div>
-    <label for="channelName">Channel</label>
-    <select name="channelName" id="channelName">
-      <option value="0">Select Channel Name </option>
-      <option value="Alpha">Alpha</option>
-      <option value="Beta">Beta</option>
-      <option value="Gamma">Gamma</option>
-    </select>
-  </div>
+
   <div style="margin-top: .5em;">
     <label for="frameRate">Frame Rate</label>
     <select name="frameRate" id="frameRate">
@@ -49,34 +41,39 @@
     </select>
   </div>
   <div style="margin-top: .5em;">
-    <label for="meetingCanvasBroadcast">Broadcast Meeting Canvas</label>
-    <select name="meetingCanvasBroadcast" id="meetingCanvasBroadcast">
+    <label for="meetingCanvasBroadcast">Start Broadcast of Meeting Canvas</label>
+    <select name="meetingCanvasBroadcast" id="meetingCanvasBroadcast" style="margin-right:1rem;">
+      <option value="0">No</option>
+      <option value="1">Yes </option>
+    </select>
+    <label for="StreamsBroadcast">Start Broadcast of Video Streams</label>
+    <select name="StreamsBroadcast" id="StreamsBroadcast">
       <option value="0">No</option>
       <option value="1">Yes </option>
     </select>
   </div>
-  <h2>Data From Recorded Stream converted as Bitmap and drawn to canvas 1</h2>
-
-  <div style="margin-top: 1em; float:right;">
-    <label id="canvasLabel" for="canvas">Local canvas send in 1 FPS</label><br>
-    <canvas id="canvas"></canvas>
-    <div class="" style="margin-top: .5em">
-    </div>
-  </div>
-  <div class="">
+  <h2>Meeting Canvas</h2>
+<div style="display: flex;">
+  <div style="float: left; width: 75%;">
     <canvas id="meetingCanvas" height="400" width="600" style="border:2px solid #FF0000; margin-top:1rem; margin-left:4rem;"></canvas>
   </div>
-  <br>
-  <h2>Data Converted to RGBA from Canvas 1 and Drawn to Canvas 2</h2>
-  <canvas id="test2" width="640" height="480">
-  </canvas>
+  <div  style="margin-top: 1.25rem; float:right; margin-right:.25rem; width:25%;">
+    <label id="canvasLabel" for="StreamCanvas1">Local canvas send in 1 FPS</label><br>
+    <canvas id="StreamCanvas1"></canvas>
+    <canvas id="StreamCanvas2" style="margin-top:.5rem" ></canvas>
+    <canvas id="StreamCanvas3" style="margin-top:.5rem" ></canvas>
+    <canvas id="StreamCanvas4" style="margin-top:.5rem" ></canvas>
+    <canvas id="extraCanvas" style="margin-top:.5rem" hidden ></canvas>
+  </div>
+
+</div>
 
 
-  <div class="h-100" id="video_display">
+  <div class="h-100" id="video_display" >
     <div id="video_container" class="align-items-center" style="margin-top: 10%;">
-      <div class="local_div" id="div1" style="">
+      <div class="local_div" id="div1" style="" >
         <!-- For playing local video -->
-        <video id="localVideo" class="" autoplay muted playsinline></video>
+        <video  id="localVideo" class="" autoplay muted playsinline></video>
       </div>
       <div class="remote_div" id="div2">
         <!-- For playing local audio -->

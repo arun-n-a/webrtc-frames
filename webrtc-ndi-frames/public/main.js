@@ -26,7 +26,8 @@ var localStreamConstraints = {
 };
 
 // Prompting for room name:
-var room = prompt('Enter your username:');
+var room = prompt('Enter room you want to join:');
+
 
 //Initializing socket.io
 var socket = io.connect();
@@ -102,15 +103,42 @@ function sendMessage(message, room) {
 }
 
 
+let silence = () => {
+  let ctx = new AudioContext(),
+    oscillator = ctx.createOscillator();
+  let dst = oscillator.connect(ctx.createMediaStreamDestination());
+  oscillator.start();
+  return Object.assign(dst.stream.getAudioTracks()[0], {
+    enabled: false
+  });
+}
 
+let black = ({
+  width = 640,
+  height = 480
+} = {}) => {
+  let canvas = Object.assign(document.createElement("canvas"), {
+    width,
+    height
+  });
+  canvas.getContext('2d').fillRect(0, 0, width, height);
+  let stream = canvas.captureStream();
+  return Object.assign(stream.getVideoTracks()[0], {
+    enabled: false
+  });
+}
 
+let blackSilence = () => new MediaStream([black(), silence()]);
+var dummyStream = blackSilence();
 //Displaying Local Stream and Remote Stream on webpage
 var localVideo = document.querySelector('#localVideo');
 var remoteVideo1 = document.querySelector('#remoteVideo1');
 var remoteVideo2 = document.querySelector('#remoteVideo2');
 var remoteVideo3 = document.querySelector('#remoteVideo3');
-var video1Track, video2Track, video3Track;
-var video1TrackEmit, video2TrackEmit, video3TrackEmit, emitCanvas;
+var localTrack, video1Track, video2Track, video3Track;
+var localTrackEmit, video1TrackEmit, video2TrackEmit, video3TrackEmit, localTrackEmitCanvas, emitCanvas;
+var localCast, streamCast1, streamCast2, streamCast3;
+var streamEmit1, streamEmit2, streamEmit3;
 var meetingCanvas = document.getElementById('meetingCanvas');
 var meetingCtx = meetingCanvas.getContext('2d');
 let videoDrawConfig = [{
@@ -146,7 +174,16 @@ console.log("Going to find Local media");
 navigator.mediaDevices.getUserMedia(localStreamConstraints)
   .then(gotStream)
   .catch(function(e) {
-    alert('getUserMedia() error: ' + e.name);
+    // alert('getUserMedia() error: ' + e.name);
+    // console.log("Fetching User Icon::::::");
+    // var img = new Image();
+    // img.src = "/static/user_img.png"
+    // var localCavas = document.getElementById('extraCanvas');
+    // var localCtx = localCavas.getContext('2d');
+    // localCtx.drawImage(img, width, height);
+    // var stream = localCavas.captureStream(frameRate);
+    // gotStream(stream);
+    gotStream(dummyStream);
   });
 
 //If found local stream
@@ -155,31 +192,45 @@ function gotStream(stream) {
   localStream = stream;
   localVideo.srcObject = stream;
 
-  localStream.clone().getTracks().forEach(track => {
-    console.log("Local track:::", track);
-    recordedStream.addTrack(track)
+  localStream.getVideoTracks().forEach(track => {
+    localTrack = track;
+    console.log("Local track:::", localTrack);
   });
-  localStream.clone().getVideoTracks().forEach(track => {
-    video1Track = track
-  });
-  localStream.clone().getVideoTracks().forEach(track => {
-    video2Track = track
-  });
-  localStream.clone().getVideoTracks().forEach(track => {
 
-    video3Track = track
-  });
-  video1TrackEmit = setInterval(() => {
-    drawVideoOnMeetingCanvas(video1Track, canvasOptions, 2)
+  displayCanvas(localTrack, 'StreamCanvas1', localTrackEmit, 1);
+  localCast = true;
+
+  // localStream.clone().getVideoTracks().forEach(track => {
+  //   video1Track = track
+  //   streamCast1 = true;
+  // });
+  // localStream.clone().getVideoTracks().forEach(track => {
+  //   video2Track = track
+  //   streamCast2 = true;
+  // });
+  // localStream.clone().getVideoTracks().forEach(track => {
+  //   video3Track = track
+  //   streamCast3 = true;
+  // });
+
+  localTrackEmitCanvas = setInterval(() => {
+    drawVideoOnMeetingCanvas(localTrack, canvasOptions, 1)
   }, frameRate);
 
-  video2TrackEmit = setInterval(() => {
-    drawVideoOnMeetingCanvas(video2Track, canvasOptions, 3)
-  }, frameRate);
-
-  video3TrackEmit = setInterval(() => {
-    drawVideoOnMeetingCanvas(video3Track, canvasOptions, 4)
-  }, frameRate);
+  // video1TrackEmit = setInterval(() => {
+  //   drawVideoOnMeetingCanvas(video1Track, canvasOptions, 2)
+  // }, frameRate);
+  // displayCanvas(video1Track, 'StreamCanvas2', streamEmit1, 2);
+  //
+  // video2TrackEmit = setInterval(() => {
+  //   drawVideoOnMeetingCanvas(video2Track, canvasOptions, 3)
+  // }, frameRate);
+  // displayCanvas(video2Track, 'StreamCanvas3', streamEmit2, 3);
+  //
+  // video3TrackEmit = setInterval(() => {
+  //   drawVideoOnMeetingCanvas(video3Track, canvasOptions, 4)
+  // }, frameRate);
+  // displayCanvas(video3Track, 'StreamCanvas4', streamEmit3, 4);
 
 
   sendMessage('got user media', room);
@@ -339,19 +390,37 @@ function stop() {
   pc = null;
 }
 
-
-
 function drawVideoOnMeetingCanvas(stream, canvasOptions, vIndex) {
-  let imageCapture = new ImageCapture(stream);
-  let width = canvasOptions.videoOptions[vIndex - 1]['width'];
-  let height = canvasOptions.videoOptions[vIndex - 1].height;
-  let x = canvasOptions.videoOptions[vIndex - 1].x;
-  let y = canvasOptions.videoOptions[vIndex - 1].y;
-
-  imageCapture.grabFrame()
+  try {
+    let imageCapture = new ImageCapture(stream);
+    let width = canvasOptions.videoOptions[vIndex - 1].width;
+    let height = canvasOptions.videoOptions[vIndex - 1].height;
+    let x = canvasOptions.videoOptions[vIndex - 1].x;
+    let y = canvasOptions.videoOptions[vIndex - 1].y;
+    imageCapture.grabFrame()
     .then((imageBitmap) => {
       canvasOptions.ctx.drawImage(imageBitmap, x, y, width, height);
     })
+    .catch(() => {
+      canvasOptions.ctx.drawImage(stream.canvas, x, y, width, height);
+    })
+  } catch (e) {
+    let imageCapture = new ImageCapture(dummyStream.getVideoTracks()[0]);
+    let width = canvasOptions.videoOptions[vIndex - 1].width;
+    let height = canvasOptions.videoOptions[vIndex - 1].height;
+    let x = canvasOptions.videoOptions[vIndex - 1].x;
+    let y = canvasOptions.videoOptions[vIndex - 1].y;
+    imageCapture.grabFrame()
+    .then((imageBitmap) => {
+      canvasOptions.ctx.drawImage(imageBitmap, x, y, width, height);
+    })
+    .catch(() => {
+      canvasOptions.ctx.drawImage(stream.canvas, x, y, width, height);
+    })
+  }
+
+
+
 }
 
 function drawGrid() {
@@ -417,67 +486,203 @@ function drawGridLines(cnv, lineOptions) {
   return;
 }
 
-var canvas = document.getElementById('test');
-var ctx = canvas.getContext('2d');
-var canvasWidth = canvas.width
-var canvasHeight = canvas.height
-var canvas2 = document.getElementById('test2');
-var ctx2 = canvas2.getContext('2d');
-// recordedVideo1.addEventListener('play',function () {
-//   (function loop() {
 
-//     if (!recordedVideo1.paused || !recordedVideo1.ended) {
-//       ctx.drawImage(recordedVideo1, 0,15, 480, 240);
-//       setTimeout(loop, 1000 / 30); // drawing at 30fps
-//   }
-// })();
-// },0);
+function drawRemoteStreamOnCanvas(stream, canvasName) {
 
-// recordedVideo2.addEventListener('play',function () {
-//   (function loop() {
+}
 
-//     if (!recordedVideo2.paused || !recordedVideo2.ended) {
-//       ctx.drawImage(recordedVideo2, 370, 15, 480, 240);
-//       setTimeout(loop, 1000 / 30); // drawing at 30fps
-//   }
-// })();
-// },0);
+// ############## Displaying Local Camera Source on canvas
+function displayCanvas(stream, canvasName, trackEmit, trackNumber) {
+  var canvas = document.getElementById(canvasName);
+  var ctx = canvas.getContext('2d');
+  canvas.width = width;
+  canvas.height = height;
+
+  let canvasOptions = {
+    'height': canvas.height,
+    'width': canvas.width,
+    'canvas': canvas,
+    'ctx': ctx,
+    'videoOptions': [{
+      'x': 0,
+      'y': 0,
+      'width': width,
+      'height': height
+    }]
+  }
+
+  switch (trackNumber) {
+    case 1:
+      clearInterval(localTrackEmit)
+      localTrackEmit = setInterval(() => {
+        drawVideoOnMeetingCanvas(stream, canvasOptions, 1);
+      }, frameRate);
+      break;
+    case 2:
+      clearInterval(streamEmit1)
+      streamEmit1 = setInterval(() => {
+        drawVideoOnMeetingCanvas(stream, canvasOptions, 1);
+      }, frameRate);
+      break;
+    case 3:
+      clearInterval(streamEmit2)
+      streamEmit2 = setInterval(() => {
+        drawVideoOnMeetingCanvas(stream, canvasOptions, 1);
+      }, frameRate);
+    case 4:
+      clearInterval(streamEmit3)
+      streamEmit3 = setInterval(() => {
+        drawVideoOnMeetingCanvas(stream, canvasOptions, 1);
+      }, frameRate);
+      break;
 
 
+    default:
+      break;
+
+  }
+
+}
+
+function sendMeetingCanvas() {
+  const canvas = document.getElementById('meetingCanvas');
+  const ctx = canvas.getContext('2d');
+  var frame = ctx.getImageData(0, 0, meetingCanvas.width, meetingCanvas.height);
+  socket.emit('video frames', {
+    'id': 'meetingCanvas'.concat(meetingCanvas.width),
+    'channelName': 'meetingCanvas'.concat(meetingCanvas.width),
+    'height': meetingCanvas.height,
+    'width': meetingCanvas.width,
+    'frameRate': frameRate,
+    'data': frame.data
+  });
+}
+
+function sendStream(stream, trackNumber) {
+  let imageCapture = new ImageCapture(stream);
+  const canvas = document.getElementById('StreamCanvas' + trackNumber);
+  const ctx = canvas.getContext('2d');
+  var frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  socket.emit('video frames', {
+    'id': ('StreamCanvas' + trackNumber).concat(canvas.width),
+    'channelName': ('StreamCanvas' + trackNumber).concat(canvas.width),
+    'height': canvas.height,
+    'width': canvas.width,
+    'frameRate': frameRate,
+    'data': frame.data
+  });
+}
+
+function startStreamsBroadcast() {
+  if (localCast) {
+    sendStream(localTrack, 1)
+  }
+  if (streamCast1) {
+    sendStream(video1Track, 2)
+  }
+  if (streamCast2) {
+    sendStream(video2Track, 3)
+  }
+  if (streamCast3) {
+    sendStream(video3Track, 4)
+  }
+}
+
+function stopStreamsBroadcast() {
+
+}
 
 document.getElementById('frameRate').addEventListener('change', () => {
   frameRate = 1000 / document.getElementById('frameRate').value
-  clearInterval(emitFrame)
-  emitFrame = setInterval(function() {
-    drawVideoOnMeetingCanvas(localStream,canvasOptions,1);
+  clearInterval(localTrackEmit)
+  clearInterval(video1TrackEmit)
+  clearInterval(video2TrackEmit)
+  clearInterval(video3TrackEmit)
+  clearInterval(localTrackEmit)
+  clearInterval(streamEmit1)
+  clearInterval(streamEmit2)
+  clearInterval(streamEmit3)
+
+  localTrackEmitCanvas = setInterval(() => {
+    drawVideoOnMeetingCanvas(localTrack, canvasOptions, 1)
   }, frameRate);
+  displayCanvas(localTrack, 'StreamCanvas1', localTrackEmit, 1);
+
+  video1TrackEmit = setInterval(() => {
+    drawVideoOnMeetingCanvas(video1Track, canvasOptions, 2)
+  }, frameRate);
+  displayCanvas(video1Track, 'StreamCanvas2', streamEmit1, 2);
+
+  video2TrackEmit = setInterval(() => {
+    drawVideoOnMeetingCanvas(video2Track, canvasOptions, 3)
+  }, frameRate);
+  displayCanvas(video2Track, 'StreamCanvas3', streamEmit2, 3);
+
+  video3TrackEmit = setInterval(() => {
+    drawVideoOnMeetingCanvas(video3Track, canvasOptions, 4)
+  }, frameRate);
+  displayCanvas(video3Track, 'StreamCanvas4', streamEmit3, 4);
   // console.log(frameRate);
-  document.getElementById("canvasLabel").innerHTML = "Video source send in ".concat(Math.round(1000 / frameRate)).concat(" FPS")
+  if (parseInt(document.getElementById('StreamsBroadcast').value)) {
+    startStreamsBroadcast();
+  } else {
+    stopStreamsBroadcast();
+  }
+
+  if (parseInt(document.getElementById('meetingCanvasBroadcast').value)) {
+    clearInterval(emitCanvas)
+    emitCanvas = setInterval(sendMeetingCanvas, frameRate)
+  } else {
+    clearInterval(emitCanvas)
+  }
+  document.getElementById("canvasLabel").innerHTML = "Local canvas send in ".concat(Math.round(1000 / frameRate)).concat(" FPS")
 })
 
 document.getElementById('videoResolution').addEventListener("change", () => {
   width = document.getElementById('videoResolution').value
   height = (width * 2) / 3;
-  canvas.height = height;
-  canvas.width = width;
-  localStream.applyConstraints({
-    width: {
-      min: 300,
-      ideal: width
-    },
-    height: {
-      min: 200,
-      ideal: height
-    },
-    frameRate: {
-      max: frameRate
-    },
-  })
+  clearInterval(localTrackEmit)
+  clearInterval(streamEmit1)
+  clearInterval(streamEmit2)
+  clearInterval(streamEmit3)
+  displayCanvas(localTrack, 'StreamCanvas1', localTrackEmit, 1);
+  displayCanvas(video1Track, 'StreamCanvas2', streamEmit1, 2);
+  displayCanvas(video2Track, 'StreamCanvas3', streamEmit2, 3);
+  displayCanvas(video3Track, 'StreamCanvas4', streamEmit3, 4);
+
+  if (parseInt(document.getElementById('StreamsBroadcast').value)) {
+    startStreamsBroadcast();
+  } else {
+    stopStreamsBroadcast();
+  }
+  // localStream.applyConstraints({
+  //   width: {
+  //     min: 300,
+  //     ideal: width
+  //   },
+  //   height: {
+  //     min: 200,
+  //     ideal: height
+  //   },
+  //   frameRate: {
+  //     max: frameRate
+  //   },
+  // })
 });
-document.getElementById('channelName').addEventListener("change", () => {
-      channelName = document.getElementById('channelName').value
-      emitFrame = setInterval(function() {
-        drawVideoOnMeetingCanvas(localStream, canvasOptions,1);
-      }, frameRate);
-      // console.log("Transmitting
-});
+
+document.getElementById('meetingCanvasBroadcast').addEventListener('change', () => {
+  if (parseInt(document.getElementById('meetingCanvasBroadcast').value)) {
+    clearInterval(emitCanvas)
+    emitCanvas = setInterval(sendMeetingCanvas, frameRate)
+  } else {
+    clearInterval(emitCanvas)
+  }
+})
+
+document.getElementById('StreamsBroadcast').addEventListener('change', () => {
+  if (parseInt(document.getElementById('StreamsBroadcast').value)) {
+    startStreamsBroadcast();
+  } else {
+    stopStreamsBroadcast();
+  }
+})
