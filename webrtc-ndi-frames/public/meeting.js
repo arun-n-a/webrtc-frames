@@ -191,6 +191,9 @@ function gotStream(stream) {
   console.log('Adding local stream.');
   localStream = stream;
   localVideo.srcObject = stream;
+  remoteVideo1.srcObject = dummyStream;
+  remoteVideo2.srcObject = dummyStream;
+  remoteVideo3.srcObject = dummyStream;
 
   localStream.getVideoTracks().forEach(track => {
     localTrack = track;
@@ -200,37 +203,37 @@ function gotStream(stream) {
   displayCanvas(localTrack, 'StreamCanvas1', localTrackEmit, 1);
   localCast = true;
 
-  // localStream.clone().getVideoTracks().forEach(track => {
-  //   video1Track = track
-  //   streamCast1 = true;
-  // });
-  // localStream.clone().getVideoTracks().forEach(track => {
-  //   video2Track = track
-  //   streamCast2 = true;
-  // });
-  // localStream.clone().getVideoTracks().forEach(track => {
-  //   video3Track = track
-  //   streamCast3 = true;
-  // });
+  dummyStream.clone().getVideoTracks().forEach(track => {
+    video1Track = track
+    streamCast1 = true;
+  });
+  dummyStream.clone().getVideoTracks().forEach(track => {
+    video2Track = track
+    streamCast2 = true;
+  });
+  dummyStream.clone().getVideoTracks().forEach(track => {
+    video3Track = track
+    streamCast3 = true;
+  });
 
   localTrackEmitCanvas = setInterval(() => {
     drawVideoOnMeetingCanvas(localTrack, canvasOptions, 1)
   }, frameRate);
 
-  // video1TrackEmit = setInterval(() => {
-  //   drawVideoOnMeetingCanvas(video1Track, canvasOptions, 2)
-  // }, frameRate);
-  // displayCanvas(video1Track, 'StreamCanvas2', streamEmit1, 2);
-  //
-  // video2TrackEmit = setInterval(() => {
-  //   drawVideoOnMeetingCanvas(video2Track, canvasOptions, 3)
-  // }, frameRate);
-  // displayCanvas(video2Track, 'StreamCanvas3', streamEmit2, 3);
-  //
-  // video3TrackEmit = setInterval(() => {
-  //   drawVideoOnMeetingCanvas(video3Track, canvasOptions, 4)
-  // }, frameRate);
-  // displayCanvas(video3Track, 'StreamCanvas4', streamEmit3, 4);
+  video1TrackEmit = setInterval(() => {
+    drawVideoOnMeetingCanvas(video1Track, canvasOptions, 2)
+  }, frameRate);
+  displayCanvas(video1Track, 'StreamCanvas2', streamEmit1, 2);
+
+  video2TrackEmit = setInterval(() => {
+    drawVideoOnMeetingCanvas(video2Track, canvasOptions, 3)
+  }, frameRate);
+  displayCanvas(video2Track, 'StreamCanvas3', streamEmit2, 3);
+
+  video3TrackEmit = setInterval(() => {
+    drawVideoOnMeetingCanvas(video3Track, canvasOptions, 4)
+  }, frameRate);
+  displayCanvas(video3Track, 'StreamCanvas4', streamEmit3, 4);
 
 
   sendMessage('got user media', room);
