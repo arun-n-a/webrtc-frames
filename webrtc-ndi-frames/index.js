@@ -111,12 +111,12 @@ io.on('connection', (socket) => {
     console.log("Socket Info ::::",io.sockets.adapter.rooms.size);
     var numClients = clientsInRoom ? clientsInRoom.size : 0;
     log('Room ' + room + ' now has ' + numClients + ' client(s)');
-    if (numClients === 0) {
+    if (numClients === 1) {
       socket.join(room);
       log('Client ID ' + socket.id + ' created room ' + room);
       socket.emit('created', room, socket.id);
 
-    } else if (numClients === 1) {
+    } else if (numClients === 2) {
       log('Client ID ' + socket.id + ' joined room ' + room);
       io.sockets.in(room).emit('join', room);
       socket.join(room);
