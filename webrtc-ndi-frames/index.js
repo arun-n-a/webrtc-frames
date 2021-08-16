@@ -6,7 +6,7 @@ const io = require('socket.io')(http, {
     origin: '*',
   }
 });
-const port = process.env.PORT || 8000;
+const port = process.env.PORT || 80;
 const addon = require('bindings')('ndi');
 app.use('/static', express.static('public'))
 // expose module API
