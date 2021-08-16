@@ -1,8 +1,4 @@
 'use strict';
-var width = 120;
-var height = 80;
-var frameRate = 1000 / 1;
-
 
 //Defining some global utility variables
 var isChannelReady = false;
@@ -11,89 +7,81 @@ var isStarted = false;
 var localStream;
 var pc;
 var remoteStream;
-var recordedStream = new MediaStream();
 var turnReady;
-var currentVTrackNo = 1;
 
 //Initialize turn/stun server here
-//turnconfig will be defined in public/js/config.js
 var pcConfig = turnConfig;
 
-//Set local stream constraints
 var localStreamConstraints = {
-  audio: false,
-  video: true
-};
+    audio: true,
+    video: true
+  };
+
+
+//Not prompting for room name
+//var room = 'foo';
 
 // Prompting for room name:
-var room = prompt('Enter room you want to join:');
-
+var room = prompt('Enter room name:');
 
 //Initializing socket.io
 var socket = io.connect();
 
-//Ask server to add in the room if room name is provided by the user
 if (room !== '') {
   socket.emit('create or join', room);
   console.log('Attempted to create or  join room', room);
 }
 
-//Defining socket events
-
-//Event - Client has created the room i.e. is the first member of the room
+//Defining socket connections for signalling
 socket.on('created', function(room) {
   console.log('Created room ' + room);
   isInitiator = true;
 });
 
-//Event - Room is full
 socket.on('full', function(room) {
   console.log('Room ' + room + ' is full');
 });
 
-//Event - Another client tries to join room
-socket.on('join', function(room) {
+socket.on('join', function (room){
   console.log('Another peer made a request to join room ' + room);
   console.log('This peer is the initiator of room ' + room + '!');
   isChannelReady = true;
 });
 
-//Event - Client has joined the room
 socket.on('joined', function(room) {
   console.log('joined: ' + room);
   isChannelReady = true;
 });
 
-//Event - server asks to log a message
 socket.on('log', function(array) {
   console.log.apply(console, array);
 });
 
 
-//Event - for sending meta for establishing a direct connection using WebRTC
-//The Driver code
+//Driver code
 socket.on('message', function(message, room) {
-  console.log('Client received message:', message, room);
-  if (message === 'got user media') {
-    maybeStart();
-  } else if (message.type === 'offer') {
-    if (!isInitiator && !isStarted) {
+    console.log('Client received message:', message,  room);
+    if (message === 'got user media') {
       maybeStart();
+    } else if (message.type === 'offer') {
+      if (!isInitiator && !isStarted) {
+        maybeStart();
+      }
+      pc.setRemoteDescription(new RTCSessionDescription(message));
+      doAnswer();
+    } else if (message.type === 'answer' && isStarted) {
+      pc.setRemoteDescription(new RTCSessionDescription(message));
+    } else if (message.type === 'candidate' && isStarted) {
+      var candidate = new RTCIceCandidate({
+        sdpMLineIndex: message.label,
+        candidate: message.candidate
+      });
+      pc.addIceCandidate(candidate);
+    } else if (message === 'bye' && isStarted) {
+      handleRemoteHangup();
     }
-    pc.setRemoteDescription(new RTCSessionDescription(message));
-    doAnswer();
-  } else if (message.type === 'answer' && isStarted) {
-    pc.setRemoteDescription(new RTCSessionDescription(message));
-  } else if (message.type === 'candidate' && isStarted) {
-    var candidate = new RTCIceCandidate({
-      sdpMLineIndex: message.label,
-      candidate: message.candidate
-    });
-    pc.addIceCandidate(candidate);
-  } else if (message === 'bye' && isStarted) {
-    handleRemoteHangup();
-  }
 });
+
 
 
 //Function to send message in a room
@@ -103,136 +91,22 @@ function sendMessage(message, room) {
 }
 
 
-let silence = () => {
-  let ctx = new AudioContext(),
-    oscillator = ctx.createOscillator();
-  let dst = oscillator.connect(ctx.createMediaStreamDestination());
-  oscillator.start();
-  return Object.assign(dst.stream.getAudioTracks()[0], {
-    enabled: false
-  });
-}
 
-let black = ({
-  width = 640,
-  height = 480
-} = {}) => {
-  let canvas = Object.assign(document.createElement("canvas"), {
-    width,
-    height
-  });
-  canvas.getContext('2d').fillRect(0, 0, width, height);
-  let stream = canvas.captureStream();
-  return Object.assign(stream.getVideoTracks()[0], {
-    enabled: false
-  });
-}
-
-let blackSilence = () => new MediaStream([black(), silence()]);
-var dummyStream = blackSilence();
 //Displaying Local Stream and Remote Stream on webpage
 var localVideo = document.querySelector('#localVideo');
-var remoteVideo1 = document.querySelector('#remoteVideo1');
-var remoteVideo2 = document.querySelector('#remoteVideo2');
-var remoteVideo3 = document.querySelector('#remoteVideo3');
-var localTrack, video1Track, video2Track, video3Track;
-var localTrackEmit, video1TrackEmit, video2TrackEmit, video3TrackEmit, localTrackEmitCanvas, emitCanvas;
-var localCast, streamCast1, streamCast2, streamCast3;
-var streamEmit1, streamEmit2, streamEmit3;
-var meetingCanvas = document.getElementById('meetingCanvas');
-var meetingCtx = meetingCanvas.getContext('2d');
-let videoDrawConfig = [{
-  'x': 0,
-  'y': 0,
-  'width': 300,
-  'height': 200
-}, {
-  'x': 300,
-  'y': 0,
-  'width': 300,
-  'height': 200
-}, {
-  'x': 0,
-  'y': 200,
-  'width': 300,
-  'height': 200
-}, {
-  'x': 300,
-  'y': 200,
-  'width': 300,
-  'height': 200
-}]
-let canvasOptions = {
-  'height': meetingCanvas.height,
-  'width': meetingCanvas.width,
-  'canvas': meetingCanvas,
-  'ctx': meetingCtx,
-  'videoOptions': videoDrawConfig
-}
-
+var remoteVideo = document.querySelector('#remoteVideo');
 console.log("Going to find Local media");
 navigator.mediaDevices.getUserMedia(localStreamConstraints)
-  .then(gotStream)
-  .catch(function(e) {
-    // alert('getUserMedia() error: ' + e.name);
-    // console.log("Fetching User Icon::::::");
-    // var img = new Image();
-    // img.src = "/static/user_img.png"
-    // var localCavas = document.getElementById('extraCanvas');
-    // var localCtx = localCavas.getContext('2d');
-    // localCtx.drawImage(img, width, height);
-    // var stream = localCavas.captureStream(frameRate);
-    // gotStream(stream);
-    gotStream(dummyStream);
-  });
+.then(gotStream)
+.catch(function(e) {
+  alert('getUserMedia() error: ' + e.name);
+});
 
 //If found local stream
 function gotStream(stream) {
   console.log('Adding local stream.');
   localStream = stream;
   localVideo.srcObject = stream;
-
-  localStream.getVideoTracks().forEach(track => {
-    localTrack = track;
-    console.log("Local track:::", localTrack);
-  });
-
-  displayCanvas(localTrack, 'StreamCanvas1', localTrackEmit, 1);
-  localCast = true;
-
-  // localStream.clone().getVideoTracks().forEach(track => {
-  //   video1Track = track
-  //   streamCast1 = true;
-  // });
-  // localStream.clone().getVideoTracks().forEach(track => {
-  //   video2Track = track
-  //   streamCast2 = true;
-  // });
-  // localStream.clone().getVideoTracks().forEach(track => {
-  //   video3Track = track
-  //   streamCast3 = true;
-  // });
-
-  localTrackEmitCanvas = setInterval(() => {
-    drawVideoOnMeetingCanvas(localTrack, canvasOptions, 1)
-  }, frameRate);
-
-  // video1TrackEmit = setInterval(() => {
-  //   drawVideoOnMeetingCanvas(video1Track, canvasOptions, 2)
-  // }, frameRate);
-  // displayCanvas(video1Track, 'StreamCanvas2', streamEmit1, 2);
-  //
-  // video2TrackEmit = setInterval(() => {
-  //   drawVideoOnMeetingCanvas(video2Track, canvasOptions, 3)
-  // }, frameRate);
-  // displayCanvas(video2Track, 'StreamCanvas3', streamEmit2, 3);
-  //
-  // video3TrackEmit = setInterval(() => {
-  //   drawVideoOnMeetingCanvas(video3Track, canvasOptions, 4)
-  // }, frameRate);
-  // displayCanvas(video3Track, 'StreamCanvas4', streamEmit3, 4);
-
-
   sendMessage('got user media', room);
   if (isInitiator) {
     maybeStart();
@@ -249,7 +123,6 @@ function maybeStart() {
     console.log('>>>>>> creating peer connection');
     createPeerConnection();
     pc.addStream(localStream);
-    // pc.addStream(recordedStream)
     isStarted = true;
     console.log('isInitiator', isInitiator);
     if (isInitiator) {
@@ -279,7 +152,7 @@ function createPeerConnection() {
   }
 }
 
-//Function to handle Ice candidates generated by the browser
+//Function to handle Ice candidates
 function handleIceCandidate(event) {
   console.log('icecandidate event: ', event);
   if (event.candidate) {
@@ -298,13 +171,11 @@ function handleCreateOfferError(event) {
   console.log('createOffer() error: ', event);
 }
 
-//Function to create offer
 function doCall() {
   console.log('Sending offer to peer');
   pc.createOffer(setLocalAndSendMessage, handleCreateOfferError);
 }
 
-//Function to create answer for the received offer
 function doAnswer() {
   console.log('Sending answer to peer.');
   pc.createAnswer().then(
@@ -313,7 +184,6 @@ function doAnswer() {
   );
 }
 
-//Function to set description of local media
 function setLocalAndSendMessage(sessionDescription) {
   pc.setLocalDescription(sessionDescription);
   console.log('setLocalAndSendMessage sending message', sessionDescription);
@@ -324,48 +194,11 @@ function onCreateSessionDescriptionError(error) {
   trace('Failed to create session description: ' + error.toString());
 }
 
-//Function to play remote stream as soon as this client receives it
+
 function handleRemoteStreamAdded(event) {
   console.log('Remote stream added.');
-  var newStream = event.stream;
-  switch (currentVTrackNo) {
-    case 1:
-      remoteVideo1.srcObject = newStream;
-      newStream.getVideoTracks().forEach(track => {
-        video1Track = track
-      });
-      clearInterval(video1TrackEmit);
-      video1TrackEmit = setInterval(() => {
-        drawVideoOnMeetingCanvas(video1Track, canvasOptions, 2)
-      }, frameRate);
-      break;
-    case 2:
-      remoteVideo2.srcObject = newStream;
-      newStream.getVideoTracks().forEach(track => {
-        video2Track = track
-      });
-      clearInterval(video2TrackEmit);
-      video2TrackEmit = setInterval(() => {
-        drawVideoOnMeetingCanvas(video2Track, canvasOptions, 3)
-      }, frameRate);
-      break;
-    case 3:
-      remoteVideo2.srcObject = newStream;
-
-      newStream.getVideoTracks().forEach(track => {
-        video3Track = track
-      });
-      clearInterval(video3TrackEmit);
-      video3TrackEmit = setInterval(() => {
-        drawVideoOnMeetingCanvas(video3Track, canvasOptions, 4)
-      }, frameRate);
-      break;
-
-    default:
-      currentVTrackNo = 1;
-      break;
-  }
-  currentVTrackNo++;
+  remoteStream = event.stream;
+  remoteVideo.srcObject = remoteStream;
 }
 
 function handleRemoteStreamRemoved(event) {
@@ -375,7 +208,7 @@ function handleRemoteStreamRemoved(event) {
 function hangup() {
   console.log('Hanging up.');
   stop();
-  sendMessage('bye', room);
+  sendMessage('bye',room);
 }
 
 function handleRemoteHangup() {
@@ -389,300 +222,3 @@ function stop() {
   pc.close();
   pc = null;
 }
-
-function drawVideoOnMeetingCanvas(stream, canvasOptions, vIndex) {
-  try {
-    let imageCapture = new ImageCapture(stream);
-    let width = canvasOptions.videoOptions[vIndex - 1].width;
-    let height = canvasOptions.videoOptions[vIndex - 1].height;
-    let x = canvasOptions.videoOptions[vIndex - 1].x;
-    let y = canvasOptions.videoOptions[vIndex - 1].y;
-    imageCapture.grabFrame()
-    .then((imageBitmap) => {
-      canvasOptions.ctx.drawImage(imageBitmap, x, y, width, height);
-    })
-    .catch(() => {
-      canvasOptions.ctx.drawImage(stream.canvas, x, y, width, height);
-    })
-  } catch (e) {
-    let imageCapture = new ImageCapture(dummyStream.getVideoTracks()[0]);
-    let width = canvasOptions.videoOptions[vIndex - 1].width;
-    let height = canvasOptions.videoOptions[vIndex - 1].height;
-    let x = canvasOptions.videoOptions[vIndex - 1].x;
-    let y = canvasOptions.videoOptions[vIndex - 1].y;
-    imageCapture.grabFrame()
-    .then((imageBitmap) => {
-      canvasOptions.ctx.drawImage(imageBitmap, x, y, width, height);
-    })
-    .catch(() => {
-      canvasOptions.ctx.drawImage(stream.canvas, x, y, width, height);
-    })
-  }
-
-
-
-}
-
-function drawGrid() {
-  var cnv = document.getElementById("meetingCanvas");
-  var gridOptions = {
-    minorLines: {
-      widthSeparation: 1,
-      heighSeparation: 1,
-      color: '#000000'
-    },
-    majorLines: {
-      widthSeparation: 300,
-      heighSeparation: 200,
-      color: '#FF0000'
-    }
-  };
-
-  drawGridLines(cnv, gridOptions.minorLines);
-  drawGridLines(cnv, gridOptions.majorLines);
-
-  return;
-}
-
-function drawGridLines(cnv, lineOptions) {
-
-
-  var iWidth = cnv.width;
-  var iHeight = cnv.height;
-
-  var ctx = cnv.getContext('2d');
-
-  ctx.strokeStyle = lineOptions.color;
-  ctx.strokeWidth = 1;
-
-  ctx.beginPath();
-
-  var iCount = null;
-  var i = null;
-  var x = null;
-  var y = null;
-
-  iCount = Math.floor(iWidth / lineOptions.widthSeparation);
-
-  for (i = 1; i <= iCount; i++) {
-    x = (i * lineOptions.widthSeparation);
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, iHeight);
-    ctx.stroke();
-  }
-
-
-  iCount = Math.floor(iHeight / lineOptions.heighSeparation);
-
-  for (i = 1; i <= iCount; i++) {
-    y = (i * lineOptions.heighSeparation);
-    ctx.moveTo(0, y);
-    ctx.lineTo(iWidth, y);
-    ctx.stroke();
-  }
-
-  ctx.closePath();
-
-  return;
-}
-
-
-function drawRemoteStreamOnCanvas(stream, canvasName) {
-
-}
-
-// ############## Displaying Local Camera Source on canvas
-function displayCanvas(stream, canvasName, trackEmit, trackNumber) {
-  var canvas = document.getElementById(canvasName);
-  var ctx = canvas.getContext('2d');
-  canvas.width = width;
-  canvas.height = height;
-
-  let canvasOptions = {
-    'height': canvas.height,
-    'width': canvas.width,
-    'canvas': canvas,
-    'ctx': ctx,
-    'videoOptions': [{
-      'x': 0,
-      'y': 0,
-      'width': width,
-      'height': height
-    }]
-  }
-
-  switch (trackNumber) {
-    case 1:
-      clearInterval(localTrackEmit)
-      localTrackEmit = setInterval(() => {
-        drawVideoOnMeetingCanvas(stream, canvasOptions, 1);
-      }, frameRate);
-      break;
-    case 2:
-      clearInterval(streamEmit1)
-      streamEmit1 = setInterval(() => {
-        drawVideoOnMeetingCanvas(stream, canvasOptions, 1);
-      }, frameRate);
-      break;
-    case 3:
-      clearInterval(streamEmit2)
-      streamEmit2 = setInterval(() => {
-        drawVideoOnMeetingCanvas(stream, canvasOptions, 1);
-      }, frameRate);
-    case 4:
-      clearInterval(streamEmit3)
-      streamEmit3 = setInterval(() => {
-        drawVideoOnMeetingCanvas(stream, canvasOptions, 1);
-      }, frameRate);
-      break;
-
-
-    default:
-      break;
-
-  }
-
-}
-
-function sendMeetingCanvas() {
-  const canvas = document.getElementById('meetingCanvas');
-  const ctx = canvas.getContext('2d');
-  var frame = ctx.getImageData(0, 0, meetingCanvas.width, meetingCanvas.height);
-  socket.emit('video frames', {
-    'id': 'meetingCanvas'.concat(meetingCanvas.width),
-    'channelName': 'meetingCanvas'.concat(meetingCanvas.width),
-    'height': meetingCanvas.height,
-    'width': meetingCanvas.width,
-    'frameRate': frameRate,
-    'data': frame.data
-  });
-}
-
-function sendStream(stream, trackNumber) {
-  let imageCapture = new ImageCapture(stream);
-  const canvas = document.getElementById('StreamCanvas' + trackNumber);
-  const ctx = canvas.getContext('2d');
-  var frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  socket.emit('video frames', {
-    'id': ('StreamCanvas' + trackNumber).concat(canvas.width),
-    'channelName': ('StreamCanvas' + trackNumber).concat(canvas.width),
-    'height': canvas.height,
-    'width': canvas.width,
-    'frameRate': frameRate,
-    'data': frame.data
-  });
-}
-
-function startStreamsBroadcast() {
-  if (localCast) {
-    sendStream(localTrack, 1)
-  }
-  if (streamCast1) {
-    sendStream(video1Track, 2)
-  }
-  if (streamCast2) {
-    sendStream(video2Track, 3)
-  }
-  if (streamCast3) {
-    sendStream(video3Track, 4)
-  }
-}
-
-function stopStreamsBroadcast() {
-
-}
-
-document.getElementById('frameRate').addEventListener('change', () => {
-  frameRate = 1000 / document.getElementById('frameRate').value
-  clearInterval(localTrackEmit)
-  clearInterval(video1TrackEmit)
-  clearInterval(video2TrackEmit)
-  clearInterval(video3TrackEmit)
-  clearInterval(localTrackEmit)
-  clearInterval(streamEmit1)
-  clearInterval(streamEmit2)
-  clearInterval(streamEmit3)
-
-  localTrackEmitCanvas = setInterval(() => {
-    drawVideoOnMeetingCanvas(localTrack, canvasOptions, 1)
-  }, frameRate);
-  displayCanvas(localTrack, 'StreamCanvas1', localTrackEmit, 1);
-
-  video1TrackEmit = setInterval(() => {
-    drawVideoOnMeetingCanvas(video1Track, canvasOptions, 2)
-  }, frameRate);
-  displayCanvas(video1Track, 'StreamCanvas2', streamEmit1, 2);
-
-  video2TrackEmit = setInterval(() => {
-    drawVideoOnMeetingCanvas(video2Track, canvasOptions, 3)
-  }, frameRate);
-  displayCanvas(video2Track, 'StreamCanvas3', streamEmit2, 3);
-
-  video3TrackEmit = setInterval(() => {
-    drawVideoOnMeetingCanvas(video3Track, canvasOptions, 4)
-  }, frameRate);
-  displayCanvas(video3Track, 'StreamCanvas4', streamEmit3, 4);
-  // console.log(frameRate);
-  if (parseInt(document.getElementById('StreamsBroadcast').value)) {
-    startStreamsBroadcast();
-  } else {
-    stopStreamsBroadcast();
-  }
-
-  if (parseInt(document.getElementById('meetingCanvasBroadcast').value)) {
-    clearInterval(emitCanvas)
-    emitCanvas = setInterval(sendMeetingCanvas, frameRate)
-  } else {
-    clearInterval(emitCanvas)
-  }
-  document.getElementById("canvasLabel").innerHTML = "Local canvas send in ".concat(Math.round(1000 / frameRate)).concat(" FPS")
-})
-
-document.getElementById('videoResolution').addEventListener("change", () => {
-  width = document.getElementById('videoResolution').value
-  height = (width * 2) / 3;
-  clearInterval(localTrackEmit)
-  clearInterval(streamEmit1)
-  clearInterval(streamEmit2)
-  clearInterval(streamEmit3)
-  displayCanvas(localTrack, 'StreamCanvas1', localTrackEmit, 1);
-  displayCanvas(video1Track, 'StreamCanvas2', streamEmit1, 2);
-  displayCanvas(video2Track, 'StreamCanvas3', streamEmit2, 3);
-  displayCanvas(video3Track, 'StreamCanvas4', streamEmit3, 4);
-
-  if (parseInt(document.getElementById('StreamsBroadcast').value)) {
-    startStreamsBroadcast();
-  } else {
-    stopStreamsBroadcast();
-  }
-  // localStream.applyConstraints({
-  //   width: {
-  //     min: 300,
-  //     ideal: width
-  //   },
-  //   height: {
-  //     min: 200,
-  //     ideal: height
-  //   },
-  //   frameRate: {
-  //     max: frameRate
-  //   },
-  // })
-});
-
-document.getElementById('meetingCanvasBroadcast').addEventListener('change', () => {
-  if (parseInt(document.getElementById('meetingCanvasBroadcast').value)) {
-    clearInterval(emitCanvas)
-    emitCanvas = setInterval(sendMeetingCanvas, frameRate)
-  } else {
-    clearInterval(emitCanvas)
-  }
-})
-
-document.getElementById('StreamsBroadcast').addEventListener('change', () => {
-  if (parseInt(document.getElementById('StreamsBroadcast').value)) {
-    startStreamsBroadcast();
-  } else {
-    stopStreamsBroadcast();
-  }
-})

@@ -38,6 +38,10 @@ var videoProperties = {
 };
 
 // API URLS
+app.get("/meeting", function(req, res){
+	res.sendFile(__dirname + "/meeting.html");
+});
+
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/index.html');
 });
