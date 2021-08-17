@@ -349,6 +349,7 @@ function handleRemoteStreamAdded(event) {
         drawVideoOnMeetingCanvas(video1Track, canvasOptions, 2)
       }, frameRate);
       displayStreamOnCanvas(video1Track, 'StreamCanvas2', streamEmit1, 2);
+      currentVTrackNo += 1;
       break;
     case 2:
       remoteVideo2.srcObject = newStream;
@@ -360,6 +361,7 @@ function handleRemoteStreamAdded(event) {
         drawVideoOnMeetingCanvas(video2Track, canvasOptions, 3)
       }, frameRate);
       displayStreamOnCanvas(video2Track, 'StreamCanvas3', streamEmit2, 3);
+      currentVTrackNo += 1;
       break;
     case 3:
       remoteVideo2.srcObject = newStream;
@@ -372,13 +374,13 @@ function handleRemoteStreamAdded(event) {
         drawVideoOnMeetingCanvas(video3Track, canvasOptions, 4)
       }, frameRate);
       displayStreamOnCanvas(video3Track, 'StreamCanvas4', streamEmit3, 4);
+      currentVTrackNo += 1;
       break;
 
     default:
       currentVTrackNo = 1;
       break;
   }
-  currentVTrackNo += 1;
 }
 
 function handleRemoteStreamRemoved(event) {
