@@ -31,8 +31,7 @@ var room = prompt('Enter room you want to join:');
 
 //Initializing socket.io
 var socket = io.connect();
-var streamSocket = io("ws://localhost:80");
-
+var streamSocket;
 //Ask server to add in the room if room name is provided by the user
 if (room !== '') {
   socket.emit('create or join', room);
@@ -45,6 +44,7 @@ if (room !== '') {
 socket.on('created', function(room) {
   console.log('Created room ' + room);
   isInitiator = true;
+
 });
 
 //Event - Room is full
@@ -700,7 +700,9 @@ document.getElementById('videoResolution').addEventListener("change", () => {
 });
 
 document.getElementById('meetingCanvasBroadcast').addEventListener('change', () => {
+
   if (parseInt(document.getElementById('meetingCanvasBroadcast').value)) {
+    streamSocket = io("ws://localhost:80");
     clearInterval(emitCanvas)
     emitCanvas = setInterval(sendMeetingCanvas, frameRate)
   } else {
@@ -710,6 +712,7 @@ document.getElementById('meetingCanvasBroadcast').addEventListener('change', () 
 
 document.getElementById('StreamsBroadcast').addEventListener('change', () => {
   if (parseInt(document.getElementById('StreamsBroadcast').value)) {
+    streamSocket = io("ws://localhost:80");
     isStreamCast = true;
     displayStreamOnCanvas(localTrack, 'StreamCanvas1', localTrackEmit, 1);
     displayStreamOnCanvas(video1Track, 'StreamCanvas2', streamEmit1, 2);
