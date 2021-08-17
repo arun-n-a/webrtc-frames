@@ -416,9 +416,6 @@ function drawVideoOnMeetingCanvas(stream, canvasOptions, vIndex) {
       .then((imageBitmap) => {
         canvasOptions.ctx.drawImage(imageBitmap, x, y, width, height);
       })
-      .catch(() => {
-        canvasOptions.ctx.drawImage(stream.canvas, x, y, width, height);
-      })
   } catch (e) {
     let imageCapture = new ImageCapture(dummyStream.getVideoTracks()[0]);
     let width = canvasOptions.videoOptions[vIndex - 1].width;
