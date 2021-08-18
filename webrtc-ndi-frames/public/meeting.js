@@ -339,6 +339,7 @@ function onCreateSessionDescriptionError(error) {
 function handleRemoteStreamAdded(event) {
   console.log('Remote stream added.');
   var newStream = event.stream;
+  console.log("Details of newly added Stream ::::", newStream);
   switch (currentVTrackNo) {
     case 1:
       remoteVideo1.srcObject = newStream;
