@@ -198,9 +198,9 @@ function gotStream(stream) {
   console.log('Adding local stream.');
   localStream = stream;
   localVideo.srcObject = stream;
-  remoteVideo1.srcObject = dummyStream;
-  remoteVideo2.srcObject = dummyStream;
-  remoteVideo3.srcObject = dummyStream;
+  remoteVideo1.srcObject = dummyStream.clone();
+  remoteVideo2.srcObject = dummyStream.clone();
+  remoteVideo3.srcObject = dummyStream.clone();
 
   localStream.getVideoTracks().forEach(track => {
     localTrack = track;
@@ -374,7 +374,7 @@ function handleRemoteStreamAdded(event) {
         drawVideoOnMeetingCanvas(video3Track, canvasOptions, 4)
       }, frameRate);
       displayStreamOnCanvas(video3Track, 'Gamma', streamEmit3, 4);
-      currentVTrackNo += 1;
+      currentVTrackNo = 1;
       break;
 
     default:
@@ -417,10 +417,10 @@ function drawVideoOnMeetingCanvas(stream, canvasOptions, vIndex) {
         canvasOptions.ctx.drawImage(imageBitmap, x, y, width, height);
       })
       .catch(() => {
-        canvasOptions.ctx.drawImage(dummyStream.getVideoTracks()[0].canvas, x, y, width, height);
+        canvasOptions.ctx.drawImage(dummyStream.clone().getVideoTracks()[0].canvas, x, y, width, height);
       })
   } catch (e) {
-    let imageCapture = new ImageCapture(dummyStream.getVideoTracks()[0]);
+    let imageCapture = new ImageCapture(dummyStream.clone().getVideoTracks()[0]);
     let width = canvasOptions.videoOptions[vIndex - 1].width;
     let height = canvasOptions.videoOptions[vIndex - 1].height;
     let x = canvasOptions.videoOptions[vIndex - 1].x;
@@ -430,7 +430,7 @@ function drawVideoOnMeetingCanvas(stream, canvasOptions, vIndex) {
         canvasOptions.ctx.drawImage(imageBitmap, x, y, width, height);
       })
       .catch(() => {
-        canvasOptions.ctx.drawImage(dummyStream.getVideoTracks()[0].canvas, x, y, width, height);
+        canvasOptions.ctx.drawImage(dummyStream.clone().getVideoTracks()[0].canvas, x, y, width, height);
       })
   }
 }
@@ -496,11 +496,6 @@ function drawGridLines(cnv, lineOptions) {
   ctx.closePath();
 
   return;
-}
-
-
-function drawRemoteStreamOnCanvas(stream, canvasName) {
-
 }
 
 // ############## Displaying Local Camera Source on canvas
