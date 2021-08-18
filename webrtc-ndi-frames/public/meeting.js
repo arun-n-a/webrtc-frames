@@ -81,10 +81,10 @@ socket.on('message', function(message, room) {
     if (!isInitiator && !isStarted) {
       maybeStart();
     }
-    pc.setRemoteDescription(new RTCSessionDescription(message));
+    await pc.setRemoteDescription(message);
     doAnswer();
   } else if (message.type === 'answer' && isStarted) {
-    pc.setRemoteDescription(new RTCSessionDescription(message));
+    await pc.setRemoteDescription(message);
   } else if (message.type === 'candidate' && isStarted) {
     var candidate = new RTCIceCandidate({
       sdpMLineIndex: message.label,
