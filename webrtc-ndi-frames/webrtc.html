@@ -43,10 +43,10 @@
         <option value="0">Stop Meeting Canvas Broadcast</option>
         <option value="1">Start Meeting Canvas Broadcast </option>
       </select>
-        <select name="StreamsBroadcast" id="StreamsBroadcast" class="form-select">
-          <option value="0">Stop Stream Broadcast</option>
-          <option value="1">Start Stream Broadcast</option>
-        </select>
+      <select name="StreamsBroadcast" id="StreamsBroadcast" class="form-select">
+        <option value="0">Stop Stream Broadcast</option>
+        <option value="1">Start Stream Broadcast</option>
+      </select>
     </div>
     <div class="row mt-2 border border-gray bg-gradient-dark">
       <div class="col-lg-12 col-md-8 d-flex justify-content-center">
@@ -62,7 +62,7 @@
           <canvas name="Alpha" id="Alpha" class="rounded mb-6 my-2 "></canvas>
         </div>
         <div class="col d-flex justify-content-center mx-2">
-          <span class="text-gray-500 mt-n4" >Beta</span>
+          <span class="text-gray-500 mt-n4">Beta</span>
           <canvas name="Beta" id="Beta" class="rounded mb-6 my-2 "></canvas>
         </div>
         <div class="col d-flex justify-content-center mx-2">
@@ -79,27 +79,24 @@
     </div>
 
 
-    <div class="h-100" id="video_display" hidden>
+    <div class="row" id="video_display">
       <div id="video_container" class="align-items-center" style="margin-top: 10%;">
-        <div class="local_div" id="div1" style="">
+        <div class="col local_div" id="div1" style="">
           <!-- For playing local video -->
           <video id="localVideo" class="" autoplay muted playsinline></video>
         </div>
-        <div class="remote_div" id="div2">
+        <div class="col remote_div" id="div2">
           <!-- For playing local audio -->
           <video id="remoteVideo1" class="" autoplay playsinline></video>
         </div>
-        <div class="remote_div" id="div3">
+        <div class="col remote_div" id="div3">
           <!-- For playing recorded audio -->
           <video id="remoteVideo2" class="" autoplay playsinline></video>
         </div>
-        <div class="remote_div" id="div2">
+        <div class="col remote_div" id="div4">
           <!-- For playing local audio -->
           <video id="remoteVideo3" class="" autoplay playsinline></video>
         </div>
-        <!-- <div class="remote_div" id="div3">
-			<video id="recordedVideo3" class="" autoplay playsinline></video>
-		</div> -->
       </div>
     </div>
 

@@ -190,7 +190,8 @@ navigator.mediaDevices.getUserMedia(localStreamConstraints)
     // localCtx.drawImage(img, width, height);
     // var stream = localCavas.captureStream(frameRate);
     // gotStream(stream);
-    gotStream(dummyStream.clone());
+    var stream = dummyStream.clone()
+    gotStream(stream);
   });
 
 //If found local stream
