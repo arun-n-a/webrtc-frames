@@ -618,7 +618,7 @@ function sendStream(stream, canvasOptions, trackNumber) {
   const ctx = canvasOptions.ctx
   var frame = ctx.getImageData(0, 0, canvasOptions.width, canvasOptions.height);
   streamSocket.emit('video frames', {
-    'id': ('StreamCanvas' + width).concat(canvasOptions.width),
+    'id': (canvasOptions.name).concat(canvasOptions.width),
     'channelName': (canvasOptions.name).concat(canvasOptions.width),
     'height': canvasOptions.height,
     'width': canvasOptions.width,
@@ -667,7 +667,6 @@ document.getElementById('frameRate').addEventListener('change', () => {
   } else {
     clearInterval(emitCanvas)
   }
-  document.getElementById("canvasLabel").innerHTML = "Local canvas send in ".concat(Math.round(1000 / frameRate)).concat(" FPS")
 })
 
 document.getElementById('videoResolution').addEventListener("change", () => {
