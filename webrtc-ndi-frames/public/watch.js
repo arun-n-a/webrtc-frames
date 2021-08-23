@@ -261,7 +261,8 @@ function drawVideoOnMeetingCanvas(stream, canvasOptions, vIndex) {
         canvasOptions.ctx.drawImage(imageBitmap, x, y, width, height);
       })
       .catch(() => {
-        canvasOptions.ctx.drawImage(dummyStream.clone().getVideoTracks()[0].canvas, x, y, width, height);
+        // canvasOptions.ctx.drawImage(dummyStream.clone().getVideoTracks()[0].canvas, x, y, width, height);
+        // console.log("Missed Frame:::");
       })
   } catch (e) {
     let imageCapture = new ImageCapture(dummyStream.clone().getVideoTracks()[0]);
