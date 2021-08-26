@@ -5,7 +5,8 @@ const server = http.createServer(app);
 const io = require("socket.io")(server, {
   cors: {
     origin: '*',
-  }
+  },
+   maxHttpBufferSize: 1e8
 });
 const addon = require('bindings')('ndi');
 app.use('/static', express.static('public'))
