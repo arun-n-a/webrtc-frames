@@ -2,11 +2,12 @@ const express = require("express");
 const app = express();
 const http = require("http");
 const server = http.createServer(app);
+const fs = require('fs')
 const io = require("socket.io")(server, {
   cors: {
     origin: '*',
   },
-   maxHttpBufferSize: 1e8
+  maxHttpBufferSize: 1e8
 });
 const addon = require('bindings')('ndi');
 app.use('/static', express.static('public'))
@@ -40,24 +41,60 @@ function success(err, id, type) {
 
 // API URLS
 app.get("/meeting", function(req, res) {
-    res.sendFile(__dirname + "/public/broadcast.html");
+  res.sendFile(__dirname + "/public/broadcast.html");
+});
+app.get("/audio", function(req, res) {
+
+  res.sendFile(__dirname + "/public/AudioBuffer.html");
 });
 app.get("/panel", function(req, res) {
-    res.sendFile(__dirname + "/public/watch.html");
+  res.sendFile(__dirname + "/public/watch.html");
 });
+
+function toArrayBuffer(buf) {
+  var ab = new ArrayBuffer(buf.length);
+  var view = new Uint8Array(ab);
+  for (var i = 0; i < buf.length; ++i) {
+    view[i] = buf[i];
+  }
+  return ab;
+}
+
+function toBuffer(ab) {
+  var buf = Buffer.alloc(ab.byteLength);
+  var view = new Uint8Array(ab);
+  for (var i = 0; i < buf.length; ++i) {
+    buf[i] = view[i];
+  }
+  return buf;
+}
 
 // SOCKET URLS
 io.sockets.on("error", e => console.log(e));
 io.sockets.on("connection", socket => {
   // ########### NDI sockets ###########
   socket.on('audio_buffer', function(msg) {
-    // console.log("audio received", msg);
-    socket.emit('client_aud_buf', msg)
-  });
-  socket.on('audio frames', msg => {
-    var audioFrameIs = new Uint8Array(msg);
-    //console.log(audioFrameIs);
-    ndi('sync', audioProperties, audioFrameIs.buffer, success);
+    // const audio_buf = new DataView(toArrayBuffer(toBuffer(msg)))
+
+  })
+
+  socket.on('audio frames', obj => {
+    audioProperties.id = obj.id
+    audioProperties.type = obj.type
+    audioProperties.channelName = obj.channelName
+    audioProperties.sampleRate = obj.sampleRate
+    audioProperties.noOfChannels = obj.noOfChannels
+    audioProperties.noOfSamples = obj.noOfSamples
+    audioProperties.channelStride = obj.channelStride
+    const audio_buf = new Int8Array(obj.data)
+    const audioFrameIs = new Float32Array(audio_buf, 4)
+    // audioFrameIs.set(obj.data)
+    // obj.data.forEach((item, i) => {
+    //
+    // });
+
+    console.log(audioFrameIs[0]);
+    // ndi('sync', audioProperties, audioFrameIs.buffer, success);
   });
   socket.on('video frames', obj => {
     videoProperties.id = obj.id
@@ -95,4 +132,46 @@ io.sockets.on("connection", socket => {
     socket.to(broadcaster).emit("disconnectPeer", socket.id);
   });
 });
+
 server.listen(port, () => console.log(`Server is running on port ${port}`));
+
+// executeNDI();
+
+function executeNDI() {
+  fs.readFile(__dirname + '/public/data.raw', (err, data) => {
+    if (err) {
+      console.error(err)
+      return
+    }
+    const output_raw = new DataView(toArrayBuffer(data)) // 80000
+    const audio_buffer = new Float32Array(output_raw.buffer) //20000
+    console.log(output_raw.byteLength, "DataViewLength:::");
+    console.log(audio_buffer.length, "ArrayBuffer Length:::");
+    const sample_size = 1920
+    audioProperties.sampleRate = '48000'
+    audioProperties.noOfChannels = '1'
+    audioProperties.noOfSamples = sample_size+''
+    audioProperties.channelStride = sample_size + ''
+    var i = 0;
+    setInterval(()=>{
+      const audio_frame = new Float32Array(audio_buffer.slice(i * sample_size, i * sample_size + (sample_size-1)).buffer)
+      console.log(audio_frame[0], audio_frame[1], i);
+      ndi('sync', audioProperties, audio_frame.buffer , success);
+      i++
+      if (i*sample_size > audio_buffer.length){
+        i=0;
+      }
+    },100)
+    // Worked for 1920,43
+    // console.log("Checking :::::: Length (ffmpeg, recieved data) :::", '('+data.length+','+ msg.length+')');
+    console.log("Checking :::::: ffmpeg :::", output_raw.getFloat32(0, false));
+    console.log("Checking :::::: ffmpeg :::", output_raw.getFloat32(0, true));
+    // console.log("Checking :::::: recieved data :::", audio_buf.getFloat32(audio_buf.length, false));
+  })
+};
+
+function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
